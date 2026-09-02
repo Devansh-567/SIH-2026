@@ -1,75 +1,20 @@
-==========================================
-Dependencies
-==========================================
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
 
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Node
 node_modules/
-**/node_modules/
 
-==========================================
-Environment variables
-==========================================
-
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-*.env
-
-==========================================
-Build / Production
-==========================================
-
-dist/
-build/
-out/
-.next/
-.nuxt/
-.output/
-coverage/
-
-==========================================
-Logs
-==========================================
-
-.log
-npm-debug.log
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-
-==========================================
-Cache
-==========================================
-
-.cache/
-.parcel-cache/
-.vite/
-.eslintcache
+# TypeScript
 *.tsbuildinfo
 
-==========================================
-OS files
-==========================================
-
-.DS_Store
-Thumbs.db
-desktop.ini
-
-==========================================
-Editor / IDE
-==========================================
-
-.vscode/
-.idea/
-*.swp
-*.swo
-
-==========================================
-Temporary files
-==========================================
-
-*.tmp
-*.temp
-*.bak
-
+# Environment
+.env
+.env.local
