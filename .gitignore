@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Dependencies
 node_modules/
 vendor/
@@ -62,3 +63,25 @@ env/
 *.key
 credentials.json
 service-account.json
+=======
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Node
+node_modules/
+
+# TypeScript
+*.tsbuildinfo
+
+# Environment
+.env
+.env.local
+>>>>>>> a3c4a362ce8c34e33e815450bd7bf44d268ac5c2

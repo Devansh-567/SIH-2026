@@ -18,10 +18,15 @@ from fastapi.responses import Response
 from pydantic import BaseModel
 
 from rfplatform.io.formats import MissingSigMFMetadataError, load_recording
+<<<<<<< HEAD
 from rfplatform.pipeline.compare import compare_analyses
 from rfplatform.pipeline.stages import run_pipeline
 from rfplatform.report import generator as report_generator
 from rfplatform.storage import db as storage_db
+=======
+from rfplatform.pipeline.stages import run_pipeline
+from rfplatform.report import generator as report_generator
+>>>>>>> a3c4a362ce8c34e33e815450bd7bf44d268ac5c2
 
 app = FastAPI(
     title="RF Signal Analysis Platform API",
@@ -109,6 +114,7 @@ class SpectrogramRequest(BaseModel):
 
 class ExportRequest(BaseModel):
     format: str          # "json" | "csv" | "pdf" | "sigmf"
+<<<<<<< HEAD
     analysis: dict | None = None   # the AnalysisResultJSON as already returned by /analyze
     analysis_id: str | None = None  # alternative to `analysis`: fetch from history by id --
                                      # this is what makes a report genuinely "shareable": share
@@ -136,6 +142,14 @@ class AnnotationRequest(BaseModel):
     note: str | None = None
 
 
+=======
+    analysis: dict        # the AnalysisResultJSON as already returned by /analyze -- no
+                          # server-side recomputation, so an export is always exactly what
+                          # the caller is looking at (see report/generator.py docstring)
+    filename_hint: str | None = None
+
+
+>>>>>>> a3c4a362ce8c34e33e815450bd7bf44d268ac5c2
 @app.get("/health")
 def health():
     return {"status": "ok", "pipeline_version": "0.1.0-mvp"}
@@ -267,12 +281,16 @@ def analyze(req: AnalyzeRequest):
     except Exception as e:
         raise HTTPException(500, f"Analysis pipeline failed: {e}")
 
+<<<<<<< HEAD
     result_dict = result.as_dict()
     try:
         storage_db.save_analysis(result_dict)
     except Exception:
         pass  # history persistence must never block returning a completed analysis
     return result_dict
+=======
+    return result.as_dict()
+>>>>>>> a3c4a362ce8c34e33e815450bd7bf44d268ac5c2
 
 
 @app.delete("/upload/{file_id}")
@@ -368,6 +386,7 @@ _EXPORT_EXTENSIONS = {"json": "json", "csv": "csv", "pdf": "pdf", "sigmf": "sigm
 @app.post("/export")
 def export_report(req: ExportRequest):
     """
+<<<<<<< HEAD
     Exports an already-computed analysis -- either passed directly as
     `analysis` (typically the exact response the GUI just received from
     /analyze) or fetched from history by `analysis_id` (this is what makes
@@ -375,12 +394,20 @@ def export_report(req: ExportRequest):
     client can call /export themselves without needing the full JSON blob
     resent to them first) -- as JSON, CSV, PDF, or a SigMF `.sigmf-meta`
     annotations document.
+=======
+    Exports an already-computed analysis (whatever the caller passes as
+    `analysis`, typically the exact response the GUI just received from
+    /analyze) as JSON, CSV, PDF, or a SigMF `.sigmf-meta` annotations
+    document. Deliberately stateless and recomputation-free -- see the
+    ExportRequest/report/generator.py docstrings for why.
+>>>>>>> a3c4a362ce8c34e33e815450bd7bf44d268ac5c2
     """
     fmt = req.format.lower()
     if fmt not in _EXPORT_CONTENT_TYPES:
         raise HTTPException(400, f"Unsupported export format '{req.format}'. "
                                   f"Allowed: {sorted(_EXPORT_CONTENT_TYPES)}")
 
+<<<<<<< HEAD
     analysis = req.analysis
     if analysis is None:
         if not req.analysis_id:
@@ -399,6 +426,18 @@ def export_report(req: ExportRequest):
             body = _json.dumps(report_generator.to_sigmf_meta(analysis), indent=2).encode("utf-8")
         else:  # pdf
             body = report_generator.to_pdf_bytes(analysis)
+=======
+    try:
+        if fmt == "json":
+            body = report_generator.to_json_bytes(req.analysis)
+        elif fmt == "csv":
+            body = report_generator.to_csv_bytes(req.analysis)
+        elif fmt == "sigmf":
+            import json as _json
+            body = _json.dumps(report_generator.to_sigmf_meta(req.analysis), indent=2).encode("utf-8")
+        else:  # pdf
+            body = report_generator.to_pdf_bytes(req.analysis)
+>>>>>>> a3c4a362ce8c34e33e815450bd7bf44d268ac5c2
     except Exception as e:
         raise HTTPException(500, f"Report generation failed: {e}")
 
@@ -410,6 +449,7 @@ def export_report(req: ExportRequest):
         media_type=_EXPORT_CONTENT_TYPES[fmt],
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+<<<<<<< HEAD
 
 
 # --- Analysis history / shareable reports -----------------------------------
@@ -583,3 +623,5 @@ def delete_annotation(annotation_id: int):
     if not deleted:
         raise HTTPException(404, f"No annotation found with id={annotation_id}")
     return {"deleted": True}
+=======
+>>>>>>> a3c4a362ce8c34e33e815450bd7bf44d268ac5c2

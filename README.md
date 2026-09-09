@@ -8,6 +8,7 @@ the accompanying architecture report (`SIH_26147_Architecture_Report.md`).
 It is a working, tested foundation -- **not** the finished product. See
 "What's not built yet" below before presenting this as complete.
 
+<<<<<<< HEAD
 ## Status: 176/176 tests passing
 
 **SIH pitch deck:** `docs/SIH_26147_Pitch_Deck.pptx` (6 slides: Idea, Technical
@@ -15,6 +16,9 @@ Approach, Feasibility & Viability, Impact & Benefits, Research & Roadmap --
 built around this repo's actual test results and measured ML accuracy
 numbers, not placeholder figures). **Fill in the team name / team leader
 placeholders on the title slide before submitting.**
+=======
+## Status: 142/142 tests passing
+>>>>>>> a3c4a362ce8c34e33e815450bd7bf44d268ac5c2
 
 ```
 pip install -r requirements.txt
@@ -36,14 +40,21 @@ python -m pytest tests/ -v
 | `rfplatform/dsp/chunked.py` | Full-file streaming noise estimation + signal detection (chunk-by-chunk, peak memory bounded) | `test_chunked.py`, plus `test_pipeline_integration.py`'s large-file regression test |
 | `rfplatform/report/generator.py` | Report export: JSON, CSV, PDF (via reportlab), and SigMF `.sigmf-meta` annotations -- all from the same analysis result, no recomputation | `test_report_generator.py` (PDF verified via real text extraction, not just "didn't crash") |
 | `rfplatform/ml/` | Modulation classifier: small 1D CNN over raw IQ, trained on the synthetic generator (incl. a genuine noise-only 'unknown' class), temperature calibration (applied only when it measurably helps), wired into the real confidence-fusion pipeline | `test_ml.py` (15 tests: model/dataset/calibration math, real inference behavior, live pipeline integration) |
+<<<<<<< HEAD
 | `rfplatform/dsp/fingerprint.py` | Fixed-length signal feature vector (from already-computed Parameters) + Euclidean similarity search | `test_fingerprint.py` |
 | `rfplatform/storage/db.py` | SQLite-backed analysis history, per-signal fingerprint index, analyst feedback, waterfall annotations | `test_storage.py` (10 tests) |
 | `rfplatform/pipeline/compare.py` | Parameter-by-parameter diff between two stored analyses | via `test_api.py`'s compare tests |
+=======
+>>>>>>> a3c4a362ce8c34e33e815450bd7bf44d268ac5c2
 | `rfplatform/interleave/interleavers.py` | Block, convolutional, diagonal, pseudo-random (honestly unrecoverable without seed) | `test_interleave.py` |
 | `rfplatform/pipeline/bitstream.py` | Entropy, sync-word/preamble correlation, periodic framing, byte alignment | `test_bitstream.py` |
 | `rfplatform/pipeline/fusion.py` | Confidence-fusion engine (DSP + ML evidence combination, agreement/disagreement handling) | `test_fusion.py` |
 | `rfplatform/pipeline/stages.py` | Full 17-stage pipeline orchestration, analyst-override support | `test_pipeline_integration.py` |
+<<<<<<< HEAD
 | `rfplatform/api/main.py` | FastAPI backend: `/upload` (multi-file, SigMF auto-pairing), `/analyze`, `/batch/analyze`, `/spectrogram`, `/export` (by blob or by id), `/analyses` (history/get/delete/compare/similar), `/analyses/{id}/feedback`, `/analyses/{id}/annotations`, `/health`, `/upload/{id}` (delete) | `test_api.py` (34 tests) |
+=======
+| `rfplatform/api/main.py` | FastAPI backend: `/upload` (multi-file, SigMF auto-pairing), `/analyze`, `/spectrogram`, `/export` (JSON/CSV/PDF/SigMF), `/health`, `/upload/{id}` (delete) | `test_api.py` |
+>>>>>>> a3c4a362ce8c34e33e815450bd7bf44d268ac5c2
 | `frontend/` | React/TS analyst GUI: waterfall, automatic-analysis panel with evidence trails, demod/FEC/bitstream panels, analyst overrides | manual `tsc -b` + `vite build` verified clean; see `frontend/README.md` |
 
 ## Running the API
@@ -171,6 +182,7 @@ overriding it without saying so. This is the "hybrid DSP+AI, use each
 where it's strong" architecture from PART 11 actually working, measured
 on a real disagreement, not just described.
 
+<<<<<<< HEAD
 ## Analyst workflow features: history, batch, comparison, feedback, annotations, fingerprinting
 
 All of the following are real, tested backend capabilities (see
@@ -233,6 +245,8 @@ reachable via the API today regardless of GUI coverage.
   Verified to correctly rank same-modulation signals as more similar than
   different-modulation ones.
 
+=======
+>>>>>>> a3c4a362ce8c34e33e815450bd7bf44d268ac5c2
 ## Environment deviation from the architecture report (and why)
 
 The architecture report's PART 9 recommended liquid-dsp as the primary
@@ -383,6 +397,7 @@ extend this code, be aware of:
     unambiguous case instead: predictions that are always maximally
     confident regardless of correctness, with a known 70% true accuracy,
     which is overconfidence by definition and reliably drives T upward.
+<<<<<<< HEAD
 18. **A path parameter in a route can silently shadow a literal-segment
     route registered after it.** `GET /analyses/compare` was registered
     AFTER `GET /analyses/{analysis_id}`, so FastAPI/Starlette matched
@@ -411,6 +426,8 @@ extend this code, be aware of:
     run on every call) so every public function is safe regardless of
     call order, rather than relying on every function remembering to
     initialize the schema first.
+=======
+>>>>>>> a3c4a362ce8c34e33e815450bd7bf44d268ac5c2
 
 None of these were caught by "does it import" or "does it run without
 throwing" -- they only surfaced by testing against known ground truth
@@ -420,6 +437,7 @@ were wrong. This is the same discipline the architecture report's PART 18
 
 ## What's NOT built yet
 
+<<<<<<< HEAD
 - **GUI coverage for history/batch/comparison/feedback/annotations/similarity.**
   All six are real, tested backend capabilities (previous section) reachable
   via the API today, but the React frontend does not yet have UI for any of
@@ -442,6 +460,8 @@ were wrong. This is the same discipline the architecture report's PART 18
   scale of an analyst's own recording history (hundreds to low thousands of
   signals); would need a proper ANN index (e.g. FAISS/HNSW) to scale
   further, which hasn't been necessary to build yet.
+=======
+>>>>>>> a3c4a362ce8c34e33e815450bd7bf44d268ac5c2
 - **ONNX export for lighter-weight inference.** The architecture report's
   PART 9 recommends training in PyTorch and exporting to ONNX Runtime so
   the shipped tool doesn't require a full PyTorch install on an analyst's

@@ -6,12 +6,16 @@ import pytest
 from fastapi.testclient import TestClient
 
 from rfplatform.api.main import app
+<<<<<<< HEAD
 from rfplatform.storage import db as storage_db
+=======
+>>>>>>> a3c4a362ce8c34e33e815450bd7bf44d268ac5c2
 from rfplatform.synth.generator import SynthConfig, generate
 
 client = TestClient(app)
 
 
+<<<<<<< HEAD
 @pytest.fixture(autouse=True)
 def isolated_history_db(tmp_path, monkeypatch):
     """Every test gets its own fresh SQLite file for analysis history --
@@ -21,6 +25,8 @@ def isolated_history_db(tmp_path, monkeypatch):
     monkeypatch.setattr(storage_db, "DB_PATH", tmp_path / "test_history.db")
 
 
+=======
+>>>>>>> a3c4a362ce8c34e33e815450bd7bf44d268ac5c2
 def _cf32_bytes(cfg: SynthConfig) -> bytes:
     result = generate(cfg)
     buf = io.BytesIO()
@@ -347,6 +353,7 @@ def test_export_filename_is_sanitized():
     disposition = r.headers["content-disposition"]
     assert ".." not in disposition
     assert "/" not in disposition
+<<<<<<< HEAD
 
 
 # --- Analysis history / shareable reports ------------------------------------
@@ -570,3 +577,5 @@ def test_similar_signals_finds_matching_modulation_across_analyses():
 def test_similar_signals_on_nonexistent_analysis_404():
     r = client.get("/analyses/does-not-exist/similar")
     assert r.status_code == 404
+=======
+>>>>>>> a3c4a362ce8c34e33e815450bd7bf44d268ac5c2

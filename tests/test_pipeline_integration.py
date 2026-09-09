@@ -114,6 +114,7 @@ def test_pipeline_bitstream_analysis_present_when_demod_succeeds(synthetic_qpsk_
     result = run_pipeline(path)
     assert result.bitstream_analysis["length_bits"] > 0
     assert "best_byte_alignment" in result.bitstream_analysis
+<<<<<<< HEAD
 
 
 def test_pipeline_multi_signal_segmentation_finds_both_signals(tmp_path):
@@ -170,3 +171,5 @@ def test_pipeline_single_signal_file_still_produces_one_signal_entry(synthetic_q
     result = run_pipeline(path)
     assert len(result.signals) == 1
     assert result.signals[0].demod_result is not None
+=======
+>>>>>>> a3c4a362ce8c34e33e815450bd7bf44d268ac5c2
