@@ -22,8 +22,6 @@ from rfplatform.pipeline.compare import compare_analyses
 from rfplatform.pipeline.stages import run_pipeline
 from rfplatform.report import generator as report_generator
 from rfplatform.storage import db as storage_db
-from rfplatform.pipeline.stages import run_pipeline
-from rfplatform.report import generator as report_generator
 
 app = FastAPI(
     title="RF Signal Analysis Platform API",
@@ -112,9 +110,7 @@ class SpectrogramRequest(BaseModel):
 class ExportRequest(BaseModel):
     format: str          # "json" | "csv" | "pdf" | "sigmf"
     analysis: dict | None = None   # the AnalysisResultJSON as already returned by /analyze
-    analysis_id: str | None = None  # alternative to `analysis`: fetch from history by id --
-                                     # this is what makes a report genuinely "shareable": share
-                                     # the id, the recipient's client calls /export themselves
+    analysis_id: str | None = None  # alternative to `analysis`: fetch from history by id
     filename_hint: str | None = None
 
 
@@ -136,12 +132,6 @@ class AnnotationRequest(BaseModel):
     freq_hz: float | None = None
     label: str | None = None
     note: str | None = None
-
-
-    analysis: dict        # the AnalysisResultJSON as already returned by /analyze -- no
-                          # server-side recomputation, so an export is always exactly what
-                          # the caller is looking at (see report/generator.py docstring)
-    filename_hint: str | None = None
 
 
 @app.get("/health")
@@ -170,8 +160,8 @@ async def upload_files(files: list[UploadFile]):
     if not files:
         raise HTTPException(400, "No files provided")
 
-    sigmf_uploads: dict[str, UploadFile] = {}   # stem -> data file
-    sigmf_meta_uploads: dict[str, UploadFile] = {}  # stem -> meta file
+    sigmf_uploads: dict[str, UploadFile] = {}     # stem -> data file
+    sigmf_meta_uploads: dict[str, UploadFile] = {} # stem -> meta file
     standalone: list[UploadFile] = []
 
     for f in files:
@@ -185,7 +175,7 @@ async def upload_files(files: list[UploadFile]):
             suffix = Path(filename).suffix.lower()
             if suffix not in ALLOWED_EXTENSIONS:
                 raise HTTPException(400, f"Unsupported file extension '{suffix}'. "
-                                          f"Allowed: {sorted(ALLOWED_EXTENSIONS)}")
+                                         f"Allowed: {sorted(ALLOWED_EXTENSIONS)}")
             standalone.append(f)
 
     results = []
@@ -205,8 +195,8 @@ async def upload_files(files: list[UploadFile]):
 
         if not has_data:
             raise HTTPException(400, f"'{stem}.sigmf-meta' was uploaded without a matching "
-                                      f"'{stem}.sigmf-data' -- upload both together, or the .sigmf-data "
-                                      f"file first.")
+                                     f"'{stem}.sigmf-data' -- upload both together, or the .sigmf-data "
+                                     f"file first.")
 
         # Reuse the file_id of an already-uploaded half of this pair so a
         # second, separate upload request still lands in the same recording.
@@ -281,7 +271,6 @@ def analyze(req: AnalyzeRequest):
     except Exception:
         pass  # history persistence must never block returning a completed analysis
     return result_dict
-    return result.as_dict()
 
 
 @app.delete("/upload/{file_id}")
@@ -377,7 +366,6 @@ _EXPORT_EXTENSIONS = {"json": "json", "csv": "csv", "pdf": "pdf", "sigmf": "sigm
 @app.post("/export")
 def export_report(req: ExportRequest):
     """
-<<<<<<< HEAD
     Exports an already-computed analysis -- either passed directly as
     `analysis` (typically the exact response the GUI just received from
     /analyze) or fetched from history by `analysis_id` (this is what makes
@@ -385,18 +373,11 @@ def export_report(req: ExportRequest):
     client can call /export themselves without needing the full JSON blob
     resent to them first) -- as JSON, CSV, PDF, or a SigMF `.sigmf-meta`
     annotations document.
-=======
-    Exports an already-computed analysis (whatever the caller passes as
-    `analysis`, typically the exact response the GUI just received from
-    /analyze) as JSON, CSV, PDF, or a SigMF `.sigmf-meta` annotations
-    document. Deliberately stateless and recomputation-free -- see the
-    ExportRequest/report/generator.py docstrings for why.
->>>>>>> a3c4a362ce8c34e33e815450bd7bf44d268ac5c2
     """
     fmt = req.format.lower()
     if fmt not in _EXPORT_CONTENT_TYPES:
         raise HTTPException(400, f"Unsupported export format '{req.format}'. "
-                                  f"Allowed: {sorted(_EXPORT_CONTENT_TYPES)}")
+                                 f"Allowed: {sorted(_EXPORT_CONTENT_TYPES)}")
 
     analysis = req.analysis
     if analysis is None:
@@ -416,16 +397,6 @@ def export_report(req: ExportRequest):
             body = _json.dumps(report_generator.to_sigmf_meta(analysis), indent=2).encode("utf-8")
         else:  # pdf
             body = report_generator.to_pdf_bytes(analysis)
-    try:
-        if fmt == "json":
-            body = report_generator.to_json_bytes(req.analysis)
-        elif fmt == "csv":
-            body = report_generator.to_csv_bytes(req.analysis)
-        elif fmt == "sigmf":
-            import json as _json
-            body = _json.dumps(report_generator.to_sigmf_meta(req.analysis), indent=2).encode("utf-8")
-        else:  # pdf
-            body = report_generator.to_pdf_bytes(req.analysis)
     except Exception as e:
         raise HTTPException(500, f"Report generation failed: {e}")
 
@@ -437,6 +408,7 @@ def export_report(req: ExportRequest):
         media_type=_EXPORT_CONTENT_TYPES[fmt],
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
 
 # --- Analysis history / shareable reports -----------------------------------
 
@@ -504,8 +476,11 @@ def similar_signals(analysis_id: str, signal_index: int = 0, top_k: int = 5):
     query_fp = signals[signal_index].get("fingerprint", [])
     if not query_fp:
         raise HTTPException(400, "This signal has no fingerprint to search with")
-    return {"query_analysis_id": analysis_id, "query_signal_index": signal_index,
-            "results": storage_db.find_similar_signals(query_fp, exclude_analysis_id=analysis_id, top_k=top_k)}
+    return {
+        "query_analysis_id": analysis_id,
+        "query_signal_index": signal_index,
+        "results": storage_db.find_similar_signals(query_fp, exclude_analysis_id=analysis_id, top_k=top_k),
+    }
 
 
 # --- Batch analysis -----------------------------------------------------------
@@ -550,8 +525,11 @@ def batch_analyze(req: BatchAnalyzeRequest):
             entry["error"] = f"Analysis pipeline failed: {e}"
         results.append(entry)
 
-    return {"results": results, "num_ok": sum(1 for r in results if r["status"] == "ok"),
-            "num_failed": sum(1 for r in results if r["status"] == "error")}
+    return {
+        "results": results,
+        "num_ok": sum(1 for r in results if r["status"] == "ok"),
+        "num_failed": sum(1 for r in results if r["status"] == "error"),
+    }
 
 
 # --- Analyst feedback -----------------------------------------------------------
