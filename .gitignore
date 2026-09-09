@@ -1,0 +1,64 @@
+# Dependencies
+node_modules/
+vendor/
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+logs/
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE / editors
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Build / distribution
+dist/
+build/
+out/
+.next/
+.nuxt/
+
+# Cache
+.cache/
+.parcel-cache/
+.npm/
+.yarn/
+*.tmp
+*.temp
+
+# Coverage
+coverage/
+.nyc_output/
+
+# Test artifacts
+test-results/
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+env/
+
+# Local databases
+*.sqlite
+*.sqlite3
+*.db
+
+# Secrets / credentials
+*.pem
+*.key
+credentials.json
+service-account.json

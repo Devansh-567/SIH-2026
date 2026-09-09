@@ -1,0 +1,121 @@
+:root {
+  /* --- Surface --- */
+  --bg-void: #0a0d10;           /* page background: cool graphite, not pure black */
+  --bg-panel: #12161b;          /* card/panel surface */
+  --bg-panel-raised: #171c22;   /* nested/hover surface */
+  --bg-inset: #0d1114;          /* recessed areas: hex dumps, code blocks */
+  --border-hairline: #232a31;
+  --border-hairline-bright: #313a43;
+
+  /* --- Text --- */
+  --text-primary: #e4e9ed;
+  --text-secondary: #8b96a1;
+  --text-tertiary: #5a6570;
+
+  /* --- Signature gradient: lifted directly from the waterfall colormap,
+     the one visual element that is unmistakably "RF analysis tool" and
+     nothing else. Reused for confidence bars, stage progress, and any
+     other place we want the UI to visually rhyme with the spectrogram. --- */
+  --grad-waterfall: linear-gradient(90deg, #1b1464 0%, #0a6ba8 28%, #0aa6a6 50%, #ffb000 75%, #ff4433 100%);
+  --waterfall-stop-1: #1b1464;
+  --waterfall-stop-2: #0a6ba8;
+  --waterfall-stop-3: #0aa6a6;
+  --waterfall-stop-4: #ffb000;
+  --waterfall-stop-5: #ff4433;
+
+  /* --- Five-state honesty vocabulary: each status gets a distinct color,
+     not a generic green/red pass-fail scale. Cool = certain, warm = less
+     certain, this mirrors the waterfall gradient itself (cold->hot). --- */
+  --status-detected: #4fd1c5;
+  --status-detected-dim: rgba(79, 209, 197, 0.14);
+  --status-estimated: #38a3e8;
+  --status-estimated-dim: rgba(56, 163, 232, 0.14);
+  --status-inferred: #ffb300;
+  --status-inferred-dim: rgba(255, 179, 0, 0.14);
+  --status-hypothesized: #ff8a3d;
+  --status-hypothesized-dim: rgba(255, 138, 61, 0.14);
+  --status-unknown: #9aa0a6;
+  --status-unknown-dim: rgba(154, 160, 166, 0.12);
+
+  /* --- Semantic (sparingly used, e.g. errors/warnings) --- */
+  --semantic-error: #ff4d5e;
+  --semantic-warning: #ffb300;
+  --semantic-ok: #4fd1c5;
+
+  /* --- Type --- */
+  --font-display: "Space Grotesk", "Inter", sans-serif;
+  --font-body: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", monospace;
+
+  --radius-sm: 3px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--bg-void);
+  background-image:
+    radial-gradient(ellipse 1200px 800px at 15% -10%, rgba(10, 107, 168, 0.06), transparent),
+    radial-gradient(ellipse 1000px 700px at 100% 0%, rgba(255, 176, 0, 0.03), transparent);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: rgba(10, 166, 166, 0.35);
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-void);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-hairline-bright);
+  border-radius: 5px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-tertiary);
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.hairline {
+  border: 1px solid var(--border-hairline);
+}
+
+.panel {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-lg);
+}
+
+.scanline-accent {
+  position: relative;
+}
+.scanline-accent::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--grad-waterfall);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  opacity: 0.85;
+}
