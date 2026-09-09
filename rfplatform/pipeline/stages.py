@@ -27,10 +27,7 @@ from rfplatform.dsp import chunked
 from rfplatform.dsp import classifier as dsp_classifier
 from rfplatform.dsp import demodulate as demod_module
 from rfplatform.dsp import estimators as est
-<<<<<<< HEAD
 from rfplatform.dsp import fingerprint as fingerprint_module
-=======
->>>>>>> a3c4a362ce8c34e33e815450bd7bf44d268ac5c2
 from rfplatform.fec import convolutional as convfec
 from rfplatform.fec import reed_solomon as rsfec
 from rfplatform.interleave import interleavers as il
@@ -43,10 +40,7 @@ PIPELINE_VERSION = "0.1.0-mvp"
 FEC_HYPOTHESIS_MAX_BITS = 4000  # see rationale at the FEC stage below
 NOISE_CHUNK_SIZE = 2_000_000    # per-chunk size for the full-file streaming scan (peak memory bound)
 SOI_ANALYSIS_MAX_SAMPLES = 2_000_000  # deep per-sample analysis cap on the selected signal-of-interest region
-<<<<<<< HEAD
 MAX_SIGNALS_PER_FILE = 5        # cap on how many detected regions get full per-signal analysis (see run_pipeline)
-=======
->>>>>>> a3c4a362ce8c34e33e815450bd7bf44d268ac5c2
 
 
 @dataclass
@@ -58,7 +52,6 @@ class StageResult:
 
 
 @dataclass
-<<<<<<< HEAD
 class SignalResult:
     """
     Everything Stages 7-16 produce for ONE detected signal region. A file
@@ -91,8 +84,6 @@ class SignalResult:
 
 
 @dataclass
-=======
->>>>>>> a3c4a362ce8c34e33e815450bd7bf44d268ac5c2
 class AnalysisResult:
     manifest: AnalysisManifest
     recording_summary: dict
@@ -103,10 +94,7 @@ class AnalysisResult:
     deinterleave_hypotheses: dict
     bitstream_analysis: dict | None
     stages: list[StageResult] = field(default_factory=list)
-<<<<<<< HEAD
     signals: list[SignalResult] = field(default_factory=list)
-=======
->>>>>>> a3c4a362ce8c34e33e815450bd7bf44d268ac5c2
 
     def as_dict(self) -> dict:
         return {
@@ -120,10 +108,7 @@ class AnalysisResult:
             "bitstream_analysis": self.bitstream_analysis,
             "stages": [{"name": s.name, "status": s.status, "duration_s": round(s.duration_s, 4),
                         "detail": s.detail} for s in self.stages],
-<<<<<<< HEAD
             "signals": [s.as_dict() for s in self.signals],
-=======
->>>>>>> a3c4a362ce8c34e33e815450bd7bf44d268ac5c2
         }
 
 
@@ -295,7 +280,6 @@ def run_pipeline(file_path: str, fmt: str | None = None, sample_rate_hz: float |
                                {"num_regions": len(regions), "chunks_scanned": detection.chunks_scanned,
                                 "total_samples_scanned": detection.total_samples_scanned}))
 
-<<<<<<< HEAD
     # Stages 5-6 detected `regions`; analyze up to MAX_SIGNALS_PER_FILE of
     # them (largest first) as distinct signals -- this is the concrete
     # mechanism behind "automatic multi-signal segmentation": earlier
@@ -366,37 +350,16 @@ def _analyze_region(handle: RecordingHandle, region: tuple[int, int], overrides:
     """
     stages: list[StageResult] = []
     region_start, region_end = region
-=======
-    # MVP: analyze the single largest detected region (multi-signal handling
-    # is a roadmap item). The region itself can legitimately span the whole
-    # file for a continuous transmission, so the DEEP per-sample analysis
-    # below (feature extraction, classification, demod) still bounds how
-    # much of that region it processes -- this is a distinct, later cap
-    # from the full-file scan above, and is a deliberate scoping choice
-    # (a bounded sample of a long signal is enough for these estimates),
-    # not a silent truncation of what gets *looked at*.
-    largest = max(regions, key=lambda r: r[1] - r[0])
-    region_start, region_end = largest
->>>>>>> a3c4a362ce8c34e33e815450bd7bf44d268ac5c2
     region_len = min(region_end - region_start, SOI_ANALYSIS_MAX_SAMPLES)
     soi = np.asarray(handle.samples[region_start: region_start + region_len])
 
     # Stage 7-8: parameter extraction + DSP modulation hypothesis
     t0 = time.time()
-<<<<<<< HEAD
     parameters = dsp_classifier.estimate_parameters(soi, handle.sample_rate_hz)
     dsp_mod_param = next(p for p in parameters if p.name == "modulation")
 
     if handle.center_freq_hz is not None:
         peak_param = next((p for p in parameters if p.name == "peak_frequency_hz"), None)
-=======
-    extracted = dsp_classifier.estimate_parameters(soi, handle.sample_rate_hz)
-    dsp_mod_param = next(p for p in extracted if p.name == "modulation")
-    parameters += extracted
-
-    if handle.center_freq_hz is not None:
-        peak_param = next((p for p in extracted if p.name == "peak_frequency_hz"), None)
->>>>>>> a3c4a362ce8c34e33e815450bd7bf44d268ac5c2
         if peak_param is not None and peak_param.value is not None:
             absolute_hz = handle.center_freq_hz + peak_param.value
             parameters.append(Parameter(
@@ -406,20 +369,15 @@ def _analyze_region(handle: RecordingHandle, region: tuple[int, int], overrides:
                     source="dsp:center_freq_plus_baseband_offset",
                     description=f"Center frequency ({handle.center_freq_hz:,.0f} Hz, from "
                                 f"{center_freq_source or 'metadata'}) plus baseband peak offset "
-                                f"({peak_param.value:,.1f} Hz).",
+                                f"({peak_param.value:,.1f} Hz)."
                 )],
             ))
     stages.append(StageResult("parameter_extraction", "ok", time.time() - t0))
 
-<<<<<<< HEAD
     # Stage 9: AI classification
-=======
-    # Stage 9: AI classification (stubbed in MVP)
->>>>>>> a3c4a362ce8c34e33e815450bd7bf44d268ac5c2
     t0 = time.time()
     ml_param = _run_ml_classifier(soi, handle.sample_rate_hz)
-    stages.append(StageResult("ai_classification", "skipped" if ml_param is None else "ok", time.time() - t0,
-                               {"reason": "no trained model wired in this MVP build"} if ml_param is None else {}))
+    stages.append(StageResult("ai_classification", "ok", time.time() - t0))
 
     # Stage 10: confidence fusion
     t0 = time.time()
@@ -482,12 +440,10 @@ def _analyze_region(handle: RecordingHandle, region: tuple[int, int], overrides:
     t0 = time.time()
     fec_hyps: dict = {}
     if demod_bits is not None and len(demod_bits) >= 200:
-<<<<<<< HEAD
         # Cap how much of the bitstream feeds hypothesis testing -- see
         # FEC_HYPOTHESIS_MAX_BITS's definition for the full rationale
         # (commpy's Viterbi decode is pure-Python and slow at scale; a
         # representative prefix is methodologically sufficient here).
-=======
         # Cap how much of the bitstream feeds hypothesis testing. Two
         # independent reasons, not just speed: (1) commpy's Viterbi decode
         # is pure-Python with no vectorization -- measured ~1ms/bit per
@@ -498,7 +454,6 @@ def _analyze_region(handle: RecordingHandle, region: tuple[int, int], overrides:
         # closely matches, or which RS block validates) -- decoding the
         # entire recording's bitstream for a yes/no hypothesis check doesn't
         # add confidence proportional to its cost.
->>>>>>> a3c4a362ce8c34e33e815450bd7bf44d268ac5c2
         fec_test_bits = demod_bits[:FEC_HYPOTHESIS_MAX_BITS]
         try:
             conv_results = convfec.hypothesis_search(fec_test_bits.astype(np.int64))
@@ -552,9 +507,7 @@ def _analyze_region(handle: RecordingHandle, region: tuple[int, int], overrides:
         stages.append(StageResult("bitstream_correlation_framing", "skipped", time.time() - t0,
                                    {"reason": "insufficient demodulated bits"}))
 
-<<<<<<< HEAD
     return parameters, demod_result, fec_hyps, deinterleave_hyps, bitstream_result, stages
-=======
     manifest.stage_versions = {s.name: PIPELINE_VERSION for s in stages}
 
     return AnalysisResult(
@@ -568,4 +521,3 @@ def _analyze_region(handle: RecordingHandle, region: tuple[int, int], overrides:
         bitstream_analysis=bitstream_result,
         stages=stages,
     )
->>>>>>> a3c4a362ce8c34e33e815450bd7bf44d268ac5c2
