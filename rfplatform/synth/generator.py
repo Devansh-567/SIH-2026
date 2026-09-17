@@ -102,15 +102,21 @@ def _generate_fsk(bits: np.ndarray, cfg: SynthConfig) -> np.ndarray:
     return iq
 
 
-def generate(cfg: SynthConfig) -> SynthResult:
+def generate_from_bits(bits: np.ndarray, cfg: SynthConfig) -> SynthResult:
+    """
+    Runs the full modulate -> pulse-shape -> offset -> AWGN pipeline on an
+    EXPLICITLY SUPPLIED bit sequence, rather than drawing random bits
+    internally. `generate()` below is now a thin wrapper that draws random
+    bits and calls this -- extracted so callers that need FEC-coded (or
+    otherwise structured) content flowing through the modulator, like the
+    live-demo sample catalog, get the exact same tested pulse-shaping/
+    offset/noise pipeline as every other synthetic signal in this project,
+    rather than a second, parallel implementation that could drift.
+    """
     if cfg.modulation not in SUPPORTED_MODULATIONS:
         raise ValueError(f"unsupported modulation: {cfg.modulation}")
     rng = np.random.default_rng(cfg.seed)
-
-    bits_per_symbol_map = {"bpsk": 1, "qpsk": 2, "8psk": 3, "16qam": 4, "64qam": 6, "2fsk": 1, "4fsk": 2}
-    bps = bits_per_symbol_map[cfg.modulation]
-    n_bits = cfg.n_symbols * bps
-    bits = rng.integers(0, 2, size=n_bits).astype(np.int64)
+    bits = np.asarray(bits, dtype=np.int64)
 
     if cfg.modulation in ("2fsk", "4fsk"):
         iq = _generate_fsk(bits, cfg)
@@ -159,6 +165,19 @@ def generate(cfg: SynthConfig) -> SynthResult:
     }
 
     return SynthResult(iq=iq_noisy, bits=bits, config=cfg, ground_truth=ground_truth)
+
+
+def generate(cfg: SynthConfig) -> SynthResult:
+    if cfg.modulation not in SUPPORTED_MODULATIONS:
+        raise ValueError(f"unsupported modulation: {cfg.modulation}")
+    rng = np.random.default_rng(cfg.seed)
+
+    bits_per_symbol_map = {"bpsk": 1, "qpsk": 2, "8psk": 3, "16qam": 4, "64qam": 6, "2fsk": 1, "4fsk": 2}
+    bps = bits_per_symbol_map[cfg.modulation]
+    n_bits = cfg.n_symbols * bps
+    bits = rng.integers(0, 2, size=n_bits).astype(np.int64)
+
+    return generate_from_bits(bits, cfg)
 
 
 def save_cf32(result: SynthResult, path: str) -> None:

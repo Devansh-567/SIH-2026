@@ -1,6 +1,10 @@
-import type { AnalysisResultJSON, SpectrogramJSON, UploadResponse } from "./types";
+import type {
+  AnalysisResultJSON, AnnotationEntry, BatchAnalyzeResponse, CompareResult, FeedbackEntry,
+  HistoryListResponse, SampleListResponse, SampleLoadResponse, SimilarSignalsResponse,
+  SpectrogramJSON, UploadResponse,
+} from "./types";
 
-const BASE = import.meta.env.VITE_API_BASE_URL || "/api";
+const BASE = "/api";
 
 async function asJson<T>(res: Response): Promise<T> {
   if (!res.ok) {
@@ -81,12 +85,13 @@ const EXPORT_FILENAME_EXTENSIONS: Record<string, string> = {
 export async function exportReport(
   analysis: unknown,
   format: "json" | "csv" | "pdf" | "sigmf",
-  filenameHint = "rf_analysis_report"
+  filenameHint = "rf_analysis_report",
+  analysisId?: string
 ): Promise<void> {
   const res = await fetch(`${BASE}/export`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ format, analysis, filename_hint: filenameHint }),
+    body: JSON.stringify({ format, analysis: analysisId ? undefined : analysis, analysis_id: analysisId, filename_hint: filenameHint }),
   });
   if (!res.ok) {
     let detail = res.statusText;
@@ -106,4 +111,90 @@ export async function exportReport(
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+}
+
+// --- History / batch / comparison / feedback / annotations / similarity ---
+
+export async function listHistory(limit = 50, offset = 0): Promise<HistoryListResponse> {
+  const res = await fetch(`${BASE}/analyses?limit=${limit}&offset=${offset}`);
+  return asJson(res);
+}
+
+export async function getHistoryEntry(analysisId: string): Promise<AnalysisResultJSON> {
+  const res = await fetch(`${BASE}/analyses/${analysisId}`);
+  return asJson(res);
+}
+
+export async function deleteHistoryEntry(analysisId: string): Promise<void> {
+  await fetch(`${BASE}/analyses/${analysisId}`, { method: "DELETE" });
+}
+
+export async function compareHistoryEntries(idA: string, idB: string): Promise<CompareResult> {
+  const res = await fetch(`${BASE}/analyses/compare?a=${encodeURIComponent(idA)}&b=${encodeURIComponent(idB)}`);
+  return asJson(res);
+}
+
+export async function batchAnalyze(fileIds: string[], sampleRateHz?: number): Promise<BatchAnalyzeResponse> {
+  const res = await fetch(`${BASE}/batch/analyze`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ file_ids: fileIds, sample_rate_hz: sampleRateHz ?? null }),
+  });
+  return asJson(res);
+}
+
+export async function submitFeedback(
+  analysisId: string, parameterName: string, correctedValue: unknown, note?: string
+): Promise<{ feedback_id: number }> {
+  const res = await fetch(`${BASE}/analyses/${analysisId}/feedback`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ parameter_name: parameterName, corrected_value: correctedValue, note: note ?? null }),
+  });
+  return asJson(res);
+}
+
+export async function getFeedback(analysisId: string): Promise<{ feedback: FeedbackEntry[] }> {
+  const res = await fetch(`${BASE}/analyses/${analysisId}/feedback`);
+  return asJson(res);
+}
+
+export async function addAnnotation(
+  analysisId: string, opts: { startS: number; endS?: number; freqHz?: number; label?: string; note?: string }
+): Promise<{ annotation_id: number }> {
+  const res = await fetch(`${BASE}/analyses/${analysisId}/annotations`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      start_s: opts.startS, end_s: opts.endS ?? null, freq_hz: opts.freqHz ?? null,
+      label: opts.label ?? null, note: opts.note ?? null,
+    }),
+  });
+  return asJson(res);
+}
+
+export async function listAnnotations(analysisId: string): Promise<{ annotations: AnnotationEntry[] }> {
+  const res = await fetch(`${BASE}/analyses/${analysisId}/annotations`);
+  return asJson(res);
+}
+
+export async function deleteAnnotation(annotationId: number): Promise<void> {
+  await fetch(`${BASE}/annotations/${annotationId}`, { method: "DELETE" });
+}
+
+export async function getSimilarSignals(analysisId: string, signalIndex = 0, topK = 5): Promise<SimilarSignalsResponse> {
+  const res = await fetch(`${BASE}/analyses/${analysisId}/similar?signal_index=${signalIndex}&top_k=${topK}`);
+  return asJson(res);
+}
+
+// --- Demo sample catalog ---
+
+export async function listSamples(): Promise<SampleListResponse> {
+  const res = await fetch(`${BASE}/samples`);
+  return asJson(res);
+}
+
+export async function loadSample(sampleId: string): Promise<SampleLoadResponse> {
+  const res = await fetch(`${BASE}/samples/${sampleId}/load`, { method: "POST" });
+  return asJson(res);
 }

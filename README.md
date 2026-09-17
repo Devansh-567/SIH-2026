@@ -8,14 +8,13 @@ the accompanying architecture report (`SIH_26147_Architecture_Report.md`).
 It is a working, tested foundation -- **not** the finished product. See
 "What's not built yet" below before presenting this as complete.
 
-## Status: 176/176 tests passing
+## Status: 182/182 tests passing
 
 **SIH pitch deck:** `docs/SIH_26147_Pitch_Deck.pptx` (6 slides: Idea, Technical
 Approach, Feasibility & Viability, Impact & Benefits, Research & Roadmap --
 built around this repo's actual test results and measured ML accuracy
 numbers, not placeholder figures). **Fill in the team name / team leader
 placeholders on the title slide before submitting.**
-## Status: 142/142 tests passing
 
 ```
 pip install -r requirements.txt
@@ -45,7 +44,6 @@ python -m pytest tests/ -v
 | `rfplatform/pipeline/fusion.py` | Confidence-fusion engine (DSP + ML evidence combination, agreement/disagreement handling) | `test_fusion.py` |
 | `rfplatform/pipeline/stages.py` | Full 17-stage pipeline orchestration, analyst-override support | `test_pipeline_integration.py` |
 | `rfplatform/api/main.py` | FastAPI backend: `/upload` (multi-file, SigMF auto-pairing), `/analyze`, `/batch/analyze`, `/spectrogram`, `/export` (by blob or by id), `/analyses` (history/get/delete/compare/similar), `/analyses/{id}/feedback`, `/analyses/{id}/annotations`, `/health`, `/upload/{id}` (delete) | `test_api.py` (34 tests) |
-| `rfplatform/api/main.py` | FastAPI backend: `/upload` (multi-file, SigMF auto-pairing), `/analyze`, `/spectrogram`, `/export` (JSON/CSV/PDF/SigMF), `/health`, `/upload/{id}` (delete) | `test_api.py` |
 | `frontend/` | React/TS analyst GUI: waterfall, automatic-analysis panel with evidence trails, demod/FEC/bitstream panels, analyst overrides | manual `tsc -b` + `vite build` verified clean; see `frontend/README.md` |
 
 ## Running the API
@@ -173,14 +171,45 @@ overriding it without saying so. This is the "hybrid DSP+AI, use each
 where it's strong" architecture from PART 11 actually working, measured
 on a real disagreement, not just described.
 
+## Live demo: built-in sample signals
+
+For a hosted/judged demo where the evaluator has no `.iq` file of their own,
+the Analyze tab's empty state shows a **"No recording handy? Try one of
+these"** gallery. One click loads a sample and runs the complete pipeline.
+
+Four samples, each chosen to demonstrate a different capability:
+| Sample | Demonstrates |
+|---|---|
+| QPSK @ 20 dB | Clean end-to-end success; SigMF metadata read, not guessed |
+| 2-FSK @ 3 dB | **Honest degradation** -- low confidence / HYPOTHESIZED, not a confident wrong answer |
+| Two signals in one file | Automatic multi-signal segmentation |
+| BPSK + convolutional FEC | FEC hypothesis search finding the real CCSDS K=7 r1/2 code (0.0000 re-encode distance) |
+
+Implementation notes that matter for credibility:
+- Samples are **generated on demand** by `rfplatform/synth/samples.py` from
+  this project's own tested signal generator, cached under `/tmp` after
+  first build -- not binary blobs committed to the repo.
+- Loading a sample registers it in the **normal upload area** and analyzes
+  it through the **same `/analyze` endpoint** a real upload uses. A demo on
+  a special-case code path would prove nothing about the real one.
+- The UI labels them plainly as **synthetic signals, not off-air captures**,
+  and shows each sample's known ground truth next to what the pipeline
+  actually found -- including when they disagree on the deliberately hard
+  low-SNR case.
+
 ## Analyst workflow features: history, batch, comparison, feedback, annotations, fingerprinting
 
 All of the following are real, tested backend capabilities (see
 `tests/test_storage.py`, `tests/test_fingerprint.py`, and the relevant
-sections of `tests/test_api.py` and `tests/test_pipeline_integration.py`)
--- not stubs. **The GUI does not yet expose all of them** (see "What's NOT
-built yet" below for exactly which ones); every capability here is
-reachable via the API today regardless of GUI coverage.
+sections of `tests/test_api.py` and `tests/test_pipeline_integration.py`).
+**Frontend coverage:** history, batch upload, comparison, feedback
+submission, and similar-signal lookup all have GUI support -- the app now
+has four tabs (Analyze / History / Batch / Compare); see
+`frontend/src/components/HistoryView.tsx`, `BatchView.tsx`, `CompareView.tsx`,
+and `SimilarSignalsPanel.tsx`, plus the inline correction widget added to
+`ParameterCard.tsx`. Waterfall click-to-annotate is the one piece still
+GUI-less (backend fully built and tested; see "What's NOT built yet").
+
 
 - **Automatic multi-signal segmentation.** The pipeline no longer analyzes
   only the single largest detected region in a file. `run_pipeline` now
@@ -413,6 +442,17 @@ extend this code, be aware of:
     run on every call) so every public function is safe regardless of
     call order, rather than relying on every function remembering to
     initialize the schema first.
+21. **The sandbox environment itself reset mid-session while building the
+    History/Batch/Compare frontend views**, wiping the entire working
+    directory (`/home/claude`). Not a code bug, but worth recording
+    plainly: the project's recoverability depended entirely on having
+    already packaged a zip checkpoint to a separate, persistent output
+    mount earlier in the session. Recovery was: restore from that zip,
+    re-verify the full 176-test backend suite and a clean frontend build
+    from the restored state, then rebuild only the handful of frontend
+    files that had been created after the last checkpoint. This is the
+    practical argument for packaging and delivering working checkpoints
+    regularly during a long build, not just at the very end.
 
 None of these were caught by "does it import" or "does it run without
 throwing" -- they only surfaced by testing against known ground truth
@@ -422,14 +462,13 @@ were wrong. This is the same discipline the architecture report's PART 18
 
 ## What's NOT built yet
 
-- **GUI coverage for history/batch/comparison/feedback/annotations/similarity.**
-  All six are real, tested backend capabilities (previous section) reachable
-  via the API today, but the React frontend does not yet have UI for any of
-  them -- no history browser, no batch-upload flow, no side-by-side
-  comparison view, no feedback-submission form, no annotation markers on
-  the waterfall, no "find similar signals" button. This is the single
-  largest gap between "what the system can do" and "what an analyst can
-  do without using the API directly" right now.
+- **Waterfall annotation UI specifically.** History browser, batch-upload
+  flow, side-by-side comparison view, feedback-submission form, and
+  "similar signals" panel are now all built into the GUI (Analyze/History/
+  Batch/Compare tabs -- see below). The one piece still missing GUI
+  coverage is drawing/clicking annotation markers directly on the
+  waterfall; the backend (`/analyses/{id}/annotations`) is fully built and
+  tested, just not wired into a click handler on the canvas yet.
 - **Batch analysis is synchronous, not a background job queue.** A batch of
   20 files runs in a single HTTP request, one after another -- fine for a
   demo, but a real deployment would want the async job-graph design the

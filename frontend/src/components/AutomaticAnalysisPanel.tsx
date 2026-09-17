@@ -1,7 +1,7 @@
 import type { Parameter } from "../lib/types";
 import { ParameterCard } from "./ParameterCard";
 
-export function AutomaticAnalysisPanel({ parameters }: { parameters: Parameter[] }) {
+export function AutomaticAnalysisPanel({ parameters, analysisId }: { parameters: Parameter[]; analysisId?: string }) {
   return (
     <div>
       <SectionHeader title="Automatic Analysis" subtitle={`${parameters.length} parameters extracted`} />
@@ -13,7 +13,7 @@ export function AutomaticAnalysisPanel({ parameters }: { parameters: Parameter[]
         }}
       >
         {parameters.map((p) => (
-          <ParameterCard key={p.name} param={p} />
+          <ParameterCard key={p.name} param={p} analysisId={analysisId} />
         ))}
       </div>
     </div>

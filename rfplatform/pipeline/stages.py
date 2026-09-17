@@ -369,7 +369,7 @@ def _analyze_region(handle: RecordingHandle, region: tuple[int, int], overrides:
                     source="dsp:center_freq_plus_baseband_offset",
                     description=f"Center frequency ({handle.center_freq_hz:,.0f} Hz, from "
                                 f"{center_freq_source or 'metadata'}) plus baseband peak offset "
-                                f"({peak_param.value:,.1f} Hz)."
+                                f"({peak_param.value:,.1f} Hz).",
                 )],
             ))
     stages.append(StageResult("parameter_extraction", "ok", time.time() - t0))
@@ -377,7 +377,8 @@ def _analyze_region(handle: RecordingHandle, region: tuple[int, int], overrides:
     # Stage 9: AI classification
     t0 = time.time()
     ml_param = _run_ml_classifier(soi, handle.sample_rate_hz)
-    stages.append(StageResult("ai_classification", "ok", time.time() - t0))
+    stages.append(StageResult("ai_classification", "skipped" if ml_param is None else "ok", time.time() - t0,
+                               {"reason": "no trained model wired in this MVP build"} if ml_param is None else {}))
 
     # Stage 10: confidence fusion
     t0 = time.time()
@@ -444,16 +445,6 @@ def _analyze_region(handle: RecordingHandle, region: tuple[int, int], overrides:
         # FEC_HYPOTHESIS_MAX_BITS's definition for the full rationale
         # (commpy's Viterbi decode is pure-Python and slow at scale; a
         # representative prefix is methodologically sufficient here).
-        # Cap how much of the bitstream feeds hypothesis testing. Two
-        # independent reasons, not just speed: (1) commpy's Viterbi decode
-        # is pure-Python with no vectorization -- measured ~1ms/bit per
-        # preset, so decoding tens of thousands of bits x 3 presets turns a
-        # single /analyze call into 10-20+ seconds, a real UX problem, not
-        # just a slow test; (2) a representative prefix is *methodologically*
-        # sufficient for hypothesis testing (which preset's re-encode most
-        # closely matches, or which RS block validates) -- decoding the
-        # entire recording's bitstream for a yes/no hypothesis check doesn't
-        # add confidence proportional to its cost.
         fec_test_bits = demod_bits[:FEC_HYPOTHESIS_MAX_BITS]
         try:
             conv_results = convfec.hypothesis_search(fec_test_bits.astype(np.int64))
@@ -508,16 +499,3 @@ def _analyze_region(handle: RecordingHandle, region: tuple[int, int], overrides:
                                    {"reason": "insufficient demodulated bits"}))
 
     return parameters, demod_result, fec_hyps, deinterleave_hyps, bitstream_result, stages
-    manifest.stage_versions = {s.name: PIPELINE_VERSION for s in stages}
-
-    return AnalysisResult(
-        manifest=manifest,
-        recording_summary=recording_summary,
-        detected_regions=regions,
-        parameters=parameters,
-        demod_result=demod_result,
-        fec_hypotheses=fec_hyps,
-        deinterleave_hypotheses=deinterleave_hyps,
-        bitstream_analysis=bitstream_result,
-        stages=stages,
-    )

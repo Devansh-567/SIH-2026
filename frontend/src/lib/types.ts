@@ -100,10 +100,23 @@ export interface ReedSolomonHypothesis {
   parity_bytes: number;
 }
 
-export interface BlockDeinterleaveHypothesis {
-  rows: number;
-  cols: number;
-  structure_score: number;
+export interface SignalResultJSON {
+  region: [number, number];
+  parameters: Parameter[];
+  demod_result: DemodResultJSON | null;
+  fec_hypotheses: {
+    convolutional?: ConvFecHypothesis[];
+    convolutional_error?: string;
+    reed_solomon?: ReedSolomonHypothesis[];
+    reed_solomon_error?: string;
+  };
+  deinterleave_hypotheses: {
+    block?: BlockDeinterleaveHypothesis[];
+    pseudo_random_note?: string;
+  };
+  bitstream_analysis: BitstreamAnalysisJSON | null;
+  fingerprint: number[];
+  stages: StageInfo[];
 }
 
 export interface AnalysisResultJSON {
@@ -124,6 +137,7 @@ export interface AnalysisResultJSON {
   };
   bitstream_analysis: BitstreamAnalysisJSON | null;
   stages: StageInfo[];
+  signals: SignalResultJSON[];
 }
 
 export interface UploadEntry {
@@ -149,4 +163,114 @@ export interface SpectrogramJSON {
   sample_rate_hz: number;
   center_freq_hz: number | null;
   is_absolute_frequency: boolean;
+}
+
+// --- History / batch / comparison / feedback / annotations / similarity ---
+
+export interface HistoryEntry {
+  id: string;
+  created_at: number;
+  input_file: string | null;
+  source_format: string | null;
+  sample_rate_hz: number | null;
+  center_freq_hz: number | null;
+  primary_modulation: string | null;
+  primary_status: string | null;
+  num_signals: number;
+}
+
+export interface HistoryListResponse {
+  analyses: HistoryEntry[];
+}
+
+export interface ParameterDiff {
+  name: string;
+  status: "same" | "changed" | "only_in_a" | "only_in_b";
+  value_a: unknown;
+  value_b: unknown;
+  status_a: string | null;
+  status_b: string | null;
+}
+
+export interface CompareResult {
+  analysis_id_a: string;
+  analysis_id_b: string;
+  recording: Record<string, { a: unknown; b: unknown; same: boolean }>;
+  parameters: ParameterDiff[];
+  num_parameters_compared: number;
+  num_parameters_changed: number;
+}
+
+export interface BatchResultEntry {
+  file_id: string;
+  status: "ok" | "error";
+  analysis_id?: string;
+  modulation?: string | null;
+  num_signals?: number;
+  error?: string;
+}
+
+export interface BatchAnalyzeResponse {
+  results: BatchResultEntry[];
+  num_ok: number;
+  num_failed: number;
+}
+
+export interface FeedbackEntry {
+  id: number;
+  analysis_id: string;
+  parameter_name: string;
+  original_value: unknown;
+  original_status: string | null;
+  corrected_value: unknown;
+  note: string | null;
+  created_at: number;
+}
+
+export interface AnnotationEntry {
+  id: number;
+  analysis_id: string;
+  start_s: number;
+  end_s: number | null;
+  freq_hz: number | null;
+  label: string | null;
+  note: string | null;
+  created_at: number;
+}
+
+export interface SimilarSignalEntry {
+  signal_id: string;
+  analysis_id: string;
+  signal_index: number;
+  region: [number | null, number | null];
+  modulation: string | null;
+  distance: number;
+}
+
+export interface SimilarSignalsResponse {
+  query_analysis_id: string;
+  query_signal_index: number;
+  results: SimilarSignalEntry[];
+}
+
+// --- Demo sample catalog ---
+
+export interface SampleSpec {
+  id: string;
+  title: string;
+  description: string;
+  highlights: string[];
+  expected: Record<string, unknown>;
+}
+
+export interface SampleListResponse {
+  samples: SampleSpec[];
+}
+
+export interface SampleLoadResponse {
+  file_id: string;
+  sample_id: string;
+  title: string;
+  expected: Record<string, unknown>;
+  size_bytes: number;
 }

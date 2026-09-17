@@ -570,3 +570,63 @@ def test_similar_signals_finds_matching_modulation_across_analyses():
 def test_similar_signals_on_nonexistent_analysis_404():
     r = client.get("/analyses/does-not-exist/similar")
     assert r.status_code == 404
+
+
+# --- Demo sample catalog (live-demo "try these" feature) --------------------
+
+def test_list_samples_returns_catalog_with_ground_truth():
+    r = client.get("/samples")
+    assert r.status_code == 200
+    samples = r.json()["samples"]
+    assert len(samples) >= 3
+    for s in samples:
+        assert s["id"] and s["title"] and s["description"]
+        assert len(s["highlights"]) > 0
+        assert isinstance(s["expected"], dict) and len(s["expected"]) > 0
+
+
+def test_load_sample_returns_usable_file_id():
+    r = client.post("/samples/qpsk_clean/load")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["file_id"] and body["sample_id"] == "qpsk_clean"
+    assert body["size_bytes"] > 0
+    client.delete(f"/upload/{body['file_id']}")
+
+
+def test_load_unknown_sample_returns_404():
+    assert client.post("/samples/not-a-real-sample/load").status_code == 404
+
+
+def test_loaded_sample_analyzes_through_the_normal_pipeline():
+    """The demo path must go through the SAME /analyze endpoint real
+    uploads use -- a demo on a special-case code path would prove nothing
+    about the real one."""
+    loaded = client.post("/samples/qpsk_clean/load").json()
+    r = client.post("/analyze", json={"file_id": loaded["file_id"]})
+    assert r.status_code == 200
+    body = r.json()
+    # SigMF metadata shipped with the sample should be read, not guessed
+    assert body["recording_summary"]["sample_rate_hz"] == loaded["expected"]["sample_rate_hz"]
+    assert body["recording_summary"]["center_freq_hz"] == loaded["expected"]["center_freq_hz"]
+    mod = next(p for p in body["parameters"] if p["name"] == "modulation")
+    assert mod["value"] == loaded["expected"]["modulation"]
+    client.delete(f"/upload/{loaded['file_id']}")
+
+
+def test_multi_signal_sample_really_yields_multiple_signals():
+    loaded = client.post("/samples/multi_signal/load").json()
+    body = client.post("/analyze", json={"file_id": loaded["file_id"]}).json()
+    assert len(body["signals"]) >= 2
+    client.delete(f"/upload/{loaded['file_id']}")
+
+
+def test_fec_sample_identifies_the_correct_convolutional_code():
+    """The FEC demo card claims the pipeline finds the CCSDS K=7 r1/2 code
+    in genuinely coded data -- this asserts that claim holds."""
+    loaded = client.post("/samples/fec_coded/load").json()
+    body = client.post("/analyze", json={"file_id": loaded["file_id"]}).json()
+    conv = body["fec_hypotheses"]["convolutional"]
+    assert conv[0]["preset"] == "k7_r1/2_ccsds"
+    assert conv[0]["reencode_distance_fraction"] < 0.01  # near-perfect re-encode match
+    client.delete(f"/upload/{loaded['file_id']}")

@@ -72,15 +72,34 @@ throughout rather than inheriting the body font.
   `.sigmf-meta` by filename, shows pairing status
 - Export Report panel: PDF/JSON/CSV/SigMF download buttons, each
   triggering a real browser download of the current analysis
+- **Four-tab navigation: Analyze / History / Batch / Compare.**
+  - **History** -- browse every persisted analysis, reopen one (loads via
+    `GET /analyses/{id}`; the waterfall honestly shows "not available" for
+    a reopened historical entry rather than trying to re-fetch a spectrogram
+    for a file that may no longer be uploaded), delete entries, select two
+    for comparison.
+  - **Batch** -- multi-file dropzone, uploads and analyzes each file via
+    `/batch/analyze`, results table with per-file success/failure and a
+    click-through to open any result in the Analyze tab.
+  - **Compare** -- pick two history entries, see a parameter-by-parameter
+    diff table (color-coded: same / changed / only-in-A / only-in-B).
+  - **Inline analyst corrections** -- every `ParameterCard`'s expanded
+    evidence view has a "Disagree? Submit a correction" affordance, posting
+    to `/analyses/{id}/feedback` and visibly confirming once recorded.
+  - **Similar Signals panel** -- shown alongside any analysis result,
+    fingerprint-based nearest-neighbor search across history, click-through
+    to open a similar signal's own analysis.
 
 ## What's NOT implemented yet
 
+- **Waterfall click-to-annotate.** The backend (`/analyses/{id}/annotations`)
+  is fully built and tested; the canvas has no click handler wired to it
+  yet, so there's no way to mark a time/frequency region from the GUI.
 - No constellation plot (backend doesn't yet expose recovered symbol I/Q
   points over the wire -- `demod_result` currently returns bits, not
   symbols; a follow-up backend change plus a scatter-plot component would
   close this gap)
 - No time-domain I/Q waveform view
-- No comparison mode (recording A vs B)
 - No live progressive rendering during analysis (the "Analyzing..." button
   state exists, but results appear all at once when the single `/analyze`
   call resolves, rather than panel-by-panel as each pipeline stage
