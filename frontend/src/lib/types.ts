@@ -58,6 +58,8 @@ export interface DemodResultJSON {
   samples_per_symbol_used: number;
   notes: string[];
   bits_preview: number[];
+  constellation?: [number, number][];
+  constellation_total_symbols?: number;
 }
 
 export interface PreambleMatch {
@@ -273,4 +275,21 @@ export interface SampleLoadResponse {
   title: string;
   expected: Record<string, unknown>;
   size_bytes: number;
+}
+
+export interface SignalViewJSON {
+  sample_rate_hz: number | null;
+  center_freq_hz: number | null;
+  start_sample: number;
+  num_samples_returned: number;
+  total_samples: number;
+  decimation: number;
+  time_domain: { time_s: number[]; i: number[]; q: number[]; envelope: number[] };
+  spectrum: {
+    freqs_hz: number[];
+    psd_db: number[];
+    is_absolute_frequency: boolean;
+    peak_freq_hz: number;
+    peak_psd_db: number;
+  };
 }

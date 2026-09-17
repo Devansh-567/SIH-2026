@@ -8,7 +8,7 @@ the accompanying architecture report (`SIH_26147_Architecture_Report.md`).
 It is a working, tested foundation -- **not** the finished product. See
 "What's not built yet" below before presenting this as complete.
 
-## Status: 182/182 tests passing
+## Status: 188/188 tests passing
 
 **SIH pitch deck:** `docs/SIH_26147_Pitch_Deck.pptx` (6 slides: Idea, Technical
 Approach, Feasibility & Viability, Impact & Benefits, Research & Roadmap --
@@ -170,6 +170,26 @@ rather than either silently trusting the wrong ML answer or silently
 overriding it without saying so. This is the "hybrid DSP+AI, use each
 where it's strong" architecture from PART 11 actually working, measured
 on a real disagreement, not just described.
+
+## Analyst visualizations
+
+The problem statement names four visualizations. All four are now built:
+
+| Visualization | Component | Notes |
+|---|---|---|
+| Waterfall / spectrogram | `Waterfall.tsx` | Canvas, signature 5-stop colormap, absolute-frequency axis when center freq is known |
+| **Constellation** | `ConstellationPlot.tsx` | Canvas scatter with *additive blending* so cluster density reads visually; EVM + lock-quality shown alongside |
+| **Time domain** | `SignalPlots.tsx` | I, Q and envelope traces on a shared axis |
+| **Frequency domain (PSD)** | `SignalPlots.tsx` | Welch PSD with the detected peak marked and labelled |
+
+Backend support: the demodulator always computed constellation points but
+previously discarded them before the API boundary -- they are now exposed
+on `demod_result.constellation`, decimated to at most 2000 points
+(`CONSTELLATION_MAX_POINTS`) so the payload stays bounded no matter how
+long the recording is. Time-domain and PSD traces come from a new
+`POST /signal-view` endpoint, likewise decimated server-side: a plot a few
+hundred pixels wide cannot resolve more, so shipping a million points to
+draw eight hundred would be waste.
 
 ## Live demo: built-in sample signals
 

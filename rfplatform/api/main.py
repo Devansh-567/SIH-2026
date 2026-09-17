@@ -634,3 +634,85 @@ def load_sample(sample_id: str):
         "expected": spec.expected,
         "size_bytes": dest_data.stat().st_size,
     }
+
+
+class SignalViewRequest(BaseModel):
+    file_id: str
+    fmt: str | None = None
+    sample_rate_hz: float | None = None
+    start_sample: int = 0
+    num_samples: int = 4096      # window of raw IQ to return for the time-domain view
+    max_points: int = 2000       # decimation target for both traces
+
+
+@app.post("/signal-view")
+def signal_view(req: SignalViewRequest):
+    """
+    Time-domain (I/Q + envelope) and frequency-domain (PSD) traces for the
+    GUI's waveform and spectrum panels -- the two visualizations the problem
+    statement asks for alongside the waterfall and constellation.
+
+    Both traces are decimated server-side to a bounded point count: a plot
+    a few hundred pixels wide cannot show more, and shipping a million
+    points to draw 800 of them would be pure waste on a large recording.
+    """
+    import numpy as np
+    from scipy.signal import welch
+
+    file_path = _resolve_data_file(req.file_id)
+    try:
+        handle = load_recording(str(file_path), fmt=req.fmt, sample_rate_hz=req.sample_rate_hz)
+    except MissingSigMFMetadataError as e:
+        raise HTTPException(400, str(e))
+
+    n_total = handle.num_samples
+    start = max(0, min(req.start_sample, max(0, n_total - 1)))
+    count = max(64, min(req.num_samples, 262_144))
+    window = np.asarray(handle.samples[start: start + count])
+    if len(window) == 0:
+        raise HTTPException(400, "Requested sample window is empty")
+
+    # --- time domain (decimated) ---
+    step = max(1, len(window) // req.max_points)
+    dec = window[::step]
+    fs = handle.sample_rate_hz
+    t0 = start / fs if fs else 0.0
+    dt = step / fs if fs else 0.0
+    time_s = [round(t0 + i * dt, 9) for i in range(len(dec))] if fs else list(range(len(dec)))
+
+    # --- frequency domain (Welch PSD over the same window) ---
+    nperseg = min(1024, len(window))
+    freqs, psd = welch(window, fs=fs or 1.0, nperseg=nperseg, return_onesided=False)
+    order = np.argsort(freqs)
+    freqs, psd = freqs[order], psd[order]
+    psd_db = 10 * np.log10(psd + 1e-20)
+    if handle.center_freq_hz is not None and fs:
+        freqs_out = freqs + handle.center_freq_hz
+        absolute = True
+    else:
+        freqs_out = freqs
+        absolute = False
+
+    peak_idx = int(np.argmax(psd_db))
+
+    return {
+        "sample_rate_hz": fs,
+        "center_freq_hz": handle.center_freq_hz,
+        "start_sample": start,
+        "num_samples_returned": int(len(dec)),
+        "total_samples": int(n_total),
+        "decimation": int(step),
+        "time_domain": {
+            "time_s": time_s,
+            "i": [round(float(v.real), 5) for v in dec],
+            "q": [round(float(v.imag), 5) for v in dec],
+            "envelope": [round(float(abs(v)), 5) for v in dec],
+        },
+        "spectrum": {
+            "freqs_hz": [round(float(f), 2) for f in freqs_out],
+            "psd_db": [round(float(v), 2) for v in psd_db],
+            "is_absolute_frequency": absolute,
+            "peak_freq_hz": round(float(freqs_out[peak_idx]), 2),
+            "peak_psd_db": round(float(psd_db[peak_idx]), 2),
+        },
+    }

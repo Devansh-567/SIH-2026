@@ -77,7 +77,7 @@ export function Waterfall({ data, errorMessage }: { data: SpectrogramJSON | null
   return (
     <div className="panel scanline-accent" style={{ padding: "14px 16px", overflow: "hidden" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 }}>
-        <div style={{ fontSize: 11, letterSpacing: "0.06em", color: "var(--text-tertiary)", textTransform: "uppercase" }}>
+        <div style={{ fontSize: 11, color: "var(--text-secondary)", fontWeight: 500 }}>
           Waterfall {data && !data.is_absolute_frequency && (
             <span style={{ color: "var(--status-hypothesized)", textTransform: "none", letterSpacing: 0 }}>
               &nbsp;(baseband-relative -- no center frequency known)
@@ -121,7 +121,7 @@ export function Waterfall({ data, errorMessage }: { data: SpectrogramJSON | null
         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
           <div style={{ display: "flex", gap: 8 }}>
             <div className="mono" style={{ fontSize: 10, color: "var(--text-tertiary)", writingMode: "vertical-rl", transform: "rotate(180deg)", textAlign: "center" }}>
-              FREQUENCY
+              frequency
             </div>
             <canvas
               ref={canvasRef}
@@ -142,7 +142,7 @@ export function Waterfall({ data, errorMessage }: { data: SpectrogramJSON | null
             <span style={{ fontSize: 10, color: "var(--text-tertiary)" }}>{fmtFreq(freqMax)}</span>
           </div>
           <div style={{ textAlign: "center", fontSize: 10, color: "var(--text-tertiary)" }} className="mono">
-            TIME &rarr;
+            time
           </div>
         </div>
       )}

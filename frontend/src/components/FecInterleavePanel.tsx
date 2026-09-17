@@ -23,7 +23,6 @@ function HypothesisTable({
                 fontWeight: 500,
                 borderBottom: "1px solid var(--border-hairline)",
                 fontSize: 10.5,
-                textTransform: "uppercase",
                 letterSpacing: "0.03em",
               }}
             >

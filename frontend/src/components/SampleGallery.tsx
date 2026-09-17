@@ -68,7 +68,7 @@ export function SampleGallery({
               </div>
 
               <div style={{ background: "var(--bg-inset)", borderRadius: "var(--radius-sm)", padding: "8px 10px", border: "1px solid var(--border-hairline)" }}>
-                <div style={{ fontSize: 9, color: "var(--text-tertiary)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>
+                <div style={{ fontSize: 9, color: "var(--text-tertiary)", letterSpacing: "0.005em", marginBottom: 4 }}>
                   Known ground truth
                 </div>
                 {Object.entries(s.expected).map(([k, v]) => (
@@ -84,10 +84,10 @@ export function SampleGallery({
                 disabled={disabled}
                 style={{
                   padding: "8px 12px", borderRadius: "var(--radius-md)", border: "none",
-                  background: disabled ? "var(--bg-panel-raised)" : "var(--grad-waterfall)",
-                  color: disabled ? "var(--text-tertiary)" : "#0a0d10",
-                  fontWeight: 700, fontSize: 12.5, cursor: disabled ? "default" : "pointer",
-                  fontFamily: "var(--font-display)", marginTop: "auto",
+                  background: disabled ? "var(--bg-panel-raised)" : "var(--status-estimated)",
+                  color: disabled ? "var(--text-tertiary)" : "#0b1620",
+                  fontWeight: 500, fontSize: 12.5, cursor: disabled ? "default" : "pointer",
+                  marginTop: "auto",
                 }}
               >
                 {"\u25B6"} Load &amp; Analyze

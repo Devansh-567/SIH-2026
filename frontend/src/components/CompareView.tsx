@@ -76,7 +76,7 @@ export function CompareView({ initialSelection }: { initialSelection: string[] }
         </div>
         <button
           onClick={runCompare} disabled={busy || !idA || !idB}
-          style={{ padding: "9px 18px", borderRadius: "var(--radius-md)", border: "none", background: busy || !idA || !idB ? "var(--bg-panel-raised)" : "var(--grad-waterfall)", color: busy || !idA || !idB ? "var(--text-tertiary)" : "#0a0d10", fontWeight: 700, fontSize: 13, cursor: busy || !idA || !idB ? "default" : "pointer", fontFamily: "var(--font-display)" }}
+          style={{ padding: "9px 18px", borderRadius: "var(--radius-md)", border: "none", background: busy || !idA || !idB ? "var(--bg-panel-raised)" : "var(--status-estimated)", color: busy || !idA || !idB ? "var(--text-tertiary)" : "#0b1620", fontWeight: 500, fontSize: 13, cursor: busy || !idA || !idB ? "default" : "pointer" }}
         >
           Compare
         </button>
@@ -98,7 +98,7 @@ export function CompareView({ initialSelection }: { initialSelection: string[] }
             <thead>
               <tr>
                 {["Parameter", "A", "B", ""].map((h) => (
-                  <th key={h} style={{ textAlign: "left", padding: "8px 14px", color: "var(--text-tertiary)", fontSize: 10, textTransform: "uppercase", borderBottom: "1px solid var(--border-hairline)" }}>{h}</th>
+                  <th key={h} style={{ textAlign: "left", padding: "8px 14px", color: "var(--text-tertiary)", fontSize: 10, borderBottom: "1px solid var(--border-hairline)" }}>{h}</th>
                 ))}
               </tr>
             </thead>
@@ -108,7 +108,7 @@ export function CompareView({ initialSelection }: { initialSelection: string[] }
                   <td style={{ padding: "7px 14px", borderBottom: "1px solid var(--border-hairline)", color: "var(--text-primary)" }}>{p.name}</td>
                   <td style={{ padding: "7px 14px", borderBottom: "1px solid var(--border-hairline)", color: p.status === "changed" ? "var(--status-estimated)" : "var(--text-secondary)" }}>{fmtVal(p.value_a)}</td>
                   <td style={{ padding: "7px 14px", borderBottom: "1px solid var(--border-hairline)", color: p.status === "changed" ? "var(--status-hypothesized)" : "var(--text-secondary)" }}>{fmtVal(p.value_b)}</td>
-                  <td style={{ padding: "7px 14px", borderBottom: "1px solid var(--border-hairline)", color: STATUS_COLOR[p.status], fontSize: 10.5, textTransform: "uppercase" }}>{p.status.replace(/_/g, " ")}</td>
+                  <td style={{ padding: "7px 14px", borderBottom: "1px solid var(--border-hairline)", color: STATUS_COLOR[p.status], fontSize: 10.5 }}>{p.status.replace(/_/g, " ")}</td>
                 </tr>
               ))}
             </tbody>

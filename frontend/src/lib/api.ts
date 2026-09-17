@@ -1,7 +1,7 @@
 import type {
   AnalysisResultJSON, AnnotationEntry, BatchAnalyzeResponse, CompareResult, FeedbackEntry,
   HistoryListResponse, SampleListResponse, SampleLoadResponse, SimilarSignalsResponse,
-  SpectrogramJSON, UploadResponse,
+  SignalViewJSON, SpectrogramJSON, UploadResponse,
 } from "./types";
 
 const BASE = "/api";
@@ -196,5 +196,21 @@ export async function listSamples(): Promise<SampleListResponse> {
 
 export async function loadSample(sampleId: string): Promise<SampleLoadResponse> {
   const res = await fetch(`${BASE}/samples/${sampleId}/load`, { method: "POST" });
+  return asJson(res);
+}
+
+export async function fetchSignalView(
+  fileId: string, opts: { sampleRateHz?: number; startSample?: number; numSamples?: number } = {}
+): Promise<SignalViewJSON> {
+  const res = await fetch(`${BASE}/signal-view`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      file_id: fileId,
+      sample_rate_hz: opts.sampleRateHz ?? null,
+      start_sample: opts.startSample ?? 0,
+      num_samples: opts.numSamples ?? 4096,
+    }),
+  });
   return asJson(res);
 }

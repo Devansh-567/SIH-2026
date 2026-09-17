@@ -30,28 +30,55 @@ the actual rendered UI before a live demo.
 
 ## Design system
 
-Built around one idea: **the waterfall/spectrogram colormap gradient is
-already this domain's own visual signature** -- so rather than picking an
-arbitrary accent color, the same 5-stop gradient (indigo -> blue -> teal ->
-amber -> red) that colors the spectrogram is reused throughout the UI: as
-confidence bars, the header accent line, and hypothesis-table highlights.
-This ties the whole interface back to something that is unmistakably "RF
-analysis tool" rather than a generic dark dashboard template.
+The product is called **Nyquist**. The name, wordmark and all copy live in
+`src/App.tsx` and `src/theme.css` — there is no hackathon or organisation
+branding anywhere in the interface, deliberately: it should read as an
+instrument someone bought, not an entry someone submitted.
 
-The five-state honesty vocabulary (DETECTED/ESTIMATED/INFERRED/
-HYPOTHESIZED/UNKNOWN) gets its own distinct color scale (cool/certain ->
-warm/uncertain, cyan through orange to neutral gray for UNKNOWN) rather than
-a generic green/red pass-fail treatment -- this is deliberate: a pass/fail
-color scheme would visually lie about a spectrum of certainty that the
-whole architecture is built to represent honestly.
+**The design concept: this is an instrument, and its subject is measurement
+under uncertainty.** Every choice below follows from that.
 
-Typography: **Space Grotesk** for headings (technical, slightly
-distinctive), **Inter** for body/labels, **JetBrains Mono** for every
-number, hex byte, and bit value -- an RF analysis tool is fundamentally
-about numbers and raw data, so those get a dedicated monospace treatment
-throughout rather than inheriting the body font.
+1. **Certainty is encoded in the typography, not just a coloured label.**
+   This is the one bold idea, and everything else stays quiet to let it
+   land. A `DETECTED` value renders solid at full weight; `INFERRED` is
+   slightly lighter; `UNKNOWN` is hollow, lighter still, and italic (see
+   `.value-*` in `theme.css`). You can scan a column of findings and see
+   what the system is sure of without reading a single status word — the
+   word is confirmation, not the signal.
+2. **The UI chrome is near-monochrome warm graphite, and that is a rule
+   with a reason.** The only saturated colour in the entire interface is
+   the five-state confidence vocabulary and the spectrogram's own
+   colormap. In a tool where colour *means* confidence, decorative colour
+   would be lying to the analyst.
+3. **Findings are a ledger, not a card grid.** Hairline-separated rows on a
+   fixed column rhythm so values align and can be compared vertically.
+   Identical rounded cards would scatter the numbers.
+4. **Confidence reads as a tick scale**, not a progress bar — instruments
+   read in graduations.
+5. **Radius is assigned by role**: data surfaces are near-square (2px,
+   they're readouts), controls are softer (5px, you touch them). One
+   radius on everything is a tell, not a decision.
+6. **Type: IBM Plex Sans + IBM Plex Mono.** Engineering heritage, real
+   character, excellent tabular numerals with a slashed zero — and
+   deliberately not the Inter/Geist default. Every number in the interface
+   is tabular so columns line up.
+7. **The header is a readout strip.** When a recording is loaded it shows
+   sample rate, centre frequency, duration, format and signal count at all
+   times — an instrument shows its operating conditions, it doesn't show
+   marketing copy. Unset values render hollow rather than as "0".
+8. **A status bar** reports pipeline state, stages run/skipped and warning
+   count. Press 1–4 to move between views.
 
-## What's implemented
+Deliberately avoided, because they are the common tells of generated UI:
+tracked-out ALL-CAPS eyebrow labels, `A · B · C` meta strings, gradient
+washes used as button fills, a single border-radius on everything, and
+decorative colour with no meaning. The codebase is grep-clean of all five.
+
+Accessibility floor: visible keyboard focus rings, `prefers-reduced-motion`
+respected, and colour is never the sole carrier of meaning (status is
+always also stated in words and in type weight).
+
+## What's implemented## What's implemented
 
 - File ingestion (drag-and-drop + click-to-browse)
 - Recording summary (format, sample rate, duration, metadata trust status)

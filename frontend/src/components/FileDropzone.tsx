@@ -70,13 +70,13 @@ export function FileDropzone({
       ) : (
         <>
           <div style={{ fontSize: 13, color: "var(--text-secondary)" }}>
-            Drop a recording here, or click to browse
+            Drop a recording here, or click to choose one
           </div>
           <div className="mono" style={{ fontSize: 10.5, color: "var(--text-tertiary)", marginTop: 4 }}>
-            .iq &middot; .wav &middot; .cf32 &middot; .cs16 &middot; .cs8 &middot; .cu8
+            Accepts .iq, .wav, .cf32, .cs16, .cs8 and .cu8
           </div>
           <div className="mono" style={{ fontSize: 10.5, color: "var(--text-tertiary)", marginTop: 2 }}>
-            SigMF: select both .sigmf-data + .sigmf-meta together
+            For SigMF, select the .sigmf-data and .sigmf-meta files together
           </div>
         </>
       )}

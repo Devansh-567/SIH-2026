@@ -85,7 +85,7 @@ export function HistoryView({
             <thead>
               <tr>
                 {["", "When", "File", "Format", "Sample Rate", "Center Freq", "Modulation", "Signals", ""].map((h) => (
-                  <th key={h} style={{ textAlign: "left", padding: "10px 12px", color: "var(--text-tertiary)", fontWeight: 500, borderBottom: "1px solid var(--border-hairline)", fontSize: 10.5, textTransform: "uppercase" }}>
+                  <th key={h} style={{ textAlign: "left", padding: "10px 12px", color: "var(--text-tertiary)", fontWeight: 500, borderBottom: "1px solid var(--border-hairline)", fontSize: 10.5 }}>
                     {h}
                   </th>
                 ))}

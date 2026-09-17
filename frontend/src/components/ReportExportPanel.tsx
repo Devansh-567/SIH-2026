@@ -27,8 +27,8 @@ export function ReportExportPanel({ result, filenameHint }: { result: AnalysisRe
 
   return (
     <div className="panel" style={{ padding: "14px 16px" }}>
-      <div style={{ fontSize: 11, letterSpacing: "0.06em", color: "var(--text-tertiary)", marginBottom: 8, textTransform: "uppercase" }}>
-        Export Report
+      <div style={{ fontSize: 11, color: "var(--text-secondary)", marginBottom: 9, fontWeight: 500 }}>
+        Save a report
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
         {FORMATS.map((f) => (

@@ -22,8 +22,8 @@ export function RecordingSummary({ summary }: { summary: RecordingSummaryT }) {
   const metadataTrusted = summary.metadata_status === "trusted_metadata" || summary.metadata_status === "sidecar_sigmf";
   return (
     <div className="panel" style={{ padding: "14px 16px" }}>
-      <div style={{ fontSize: 11, letterSpacing: "0.06em", color: "var(--text-tertiary)", marginBottom: 6, textTransform: "uppercase" }}>
-        Recording
+      <div style={{ fontSize: 11, color: "var(--text-secondary)", marginBottom: 7, fontWeight: 500 }}>
+        About this recording
       </div>
       <div style={{ borderTop: "1px solid var(--border-hairline)" }}>
         <Row label="Format" value={summary.source_format} />

@@ -81,7 +81,7 @@ export function BitstreamPanel({ bitstream }: { bitstream: BitstreamAnalysisJSON
                   <div key={i} className="mono" style={{ fontSize: 11.5, display: "flex", justifyContent: "space-between" }}>
                     <span style={{ color: "var(--status-detected)" }}>{m.name}</span>
                     <span style={{ color: "var(--text-tertiary)" }}>
-                      bit {m.position} &middot; {m.hamming_distance} err
+                      bit {m.position}, {m.hamming_distance} bit error{m.hamming_distance === 1 ? "" : "s"}
                     </span>
                   </div>
                 ))}

@@ -630,3 +630,67 @@ def test_fec_sample_identifies_the_correct_convolutional_code():
     assert conv[0]["preset"] == "k7_r1/2_ccsds"
     assert conv[0]["reencode_distance_fraction"] < 0.01  # near-perfect re-encode match
     client.delete(f"/upload/{loaded['file_id']}")
+
+
+# --- Signal visualization endpoints (constellation / time-domain / PSD) ------
+
+def test_analyze_exposes_constellation_points():
+    """The PS explicitly requires constellation plots. The demodulator has
+    always computed the symbol points; this asserts they actually reach the
+    API response rather than being discarded before the frontend."""
+    loaded = client.post("/samples/qpsk_clean/load").json()
+    body = client.post("/analyze", json={"file_id": loaded["file_id"]}).json()
+    demod = body["demod_result"]
+    assert demod is not None
+    pts = demod["constellation"]
+    assert len(pts) > 100
+    assert all(len(p) == 2 for p in pts)          # [I, Q] pairs
+    assert demod["constellation_total_symbols"] >= len(pts)
+    client.delete(f"/upload/{loaded['file_id']}")
+
+
+def test_constellation_is_bounded_for_long_recordings():
+    loaded = client.post("/samples/multi_signal/load").json()
+    body = client.post("/analyze", json={"file_id": loaded["file_id"]}).json()
+    pts = body["demod_result"]["constellation"]
+    assert len(pts) <= 2000  # decimated, not the full symbol stream
+    client.delete(f"/upload/{loaded['file_id']}")
+
+
+def test_signal_view_returns_time_domain_and_spectrum():
+    loaded = client.post("/samples/qpsk_clean/load").json()
+    r = client.post("/signal-view", json={"file_id": loaded["file_id"]})
+    assert r.status_code == 200
+    body = r.json()
+
+    td = body["time_domain"]
+    assert len(td["i"]) == len(td["q"]) == len(td["envelope"]) == len(td["time_s"])
+    assert len(td["i"]) > 100
+
+    sp = body["spectrum"]
+    assert len(sp["freqs_hz"]) == len(sp["psd_db"])
+    assert sp["is_absolute_frequency"] is True          # sample ships a center frequency
+    # peak should sit near the sample's 100 MHz center, not at baseband zero
+    assert 99_000_000 < sp["peak_freq_hz"] < 101_000_000
+
+    client.delete(f"/upload/{loaded['file_id']}")
+
+
+def test_signal_view_reports_baseband_when_no_center_frequency():
+    cfg = SynthConfig(modulation="qpsk", n_symbols=3000, snr_db=20, seed=9, sample_rate_hz=200_000)
+    file_id = _upload_standalone("plain.cf32", _cf32_bytes(cfg))
+    body = client.post("/signal-view", json={"file_id": file_id, "sample_rate_hz": 200_000}).json()
+    assert body["spectrum"]["is_absolute_frequency"] is False
+    client.delete(f"/upload/{file_id}")
+
+
+def test_signal_view_decimates_large_windows():
+    loaded = client.post("/samples/multi_signal/load").json()
+    body = client.post("/signal-view", json={"file_id": loaded["file_id"], "num_samples": 100_000}).json()
+    assert body["decimation"] > 1
+    assert body["num_samples_returned"] <= 2100  # bounded payload regardless of window size
+    client.delete(f"/upload/{loaded['file_id']}")
+
+
+def test_signal_view_unknown_file_404():
+    assert client.post("/signal-view", json={"file_id": "nope"}).status_code == 404

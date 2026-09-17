@@ -15,7 +15,7 @@ export function ConfidenceBar({ confidence, height = 5 }: { confidence: number; 
         style={{
           width: `${pct}%`,
           height: "100%",
-          background: "var(--grad-waterfall)",
+          background: "var(--status-estimated)",
           backgroundSize: "220% 100%",
           backgroundPosition: "0% 0%",
           transition: "width 400ms ease",

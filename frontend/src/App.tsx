@@ -1,6 +1,6 @@
-import { Fragment, useCallback, useState } from "react";
-import { analyzeFile, deleteUpload, fetchSpectrogram, getHistoryEntry, loadSample, uploadFiles } from "./lib/api";
-import type { AnalysisResultJSON, SpectrogramJSON, UploadEntry } from "./lib/types";
+import { Fragment, useCallback, useEffect, useState } from "react";
+import { analyzeFile, deleteUpload, fetchSignalView, fetchSpectrogram, getHistoryEntry, loadSample, uploadFiles } from "./lib/api";
+import type { AnalysisResultJSON, SignalViewJSON, SpectrogramJSON, UploadEntry } from "./lib/types";
 import { FileDropzone } from "./components/FileDropzone";
 import { RecordingSummary } from "./components/RecordingSummary";
 import { StageProgress } from "./components/StageProgress";
@@ -15,6 +15,8 @@ import { HistoryView } from "./components/HistoryView";
 import { BatchView } from "./components/BatchView";
 import { CompareView } from "./components/CompareView";
 import { SampleGallery } from "./components/SampleGallery";
+import { ConstellationPlot } from "./components/ConstellationPlot";
+import { TimeDomainPlot, SpectrumPlot } from "./components/SignalPlots";
 
 type Phase = "idle" | "uploading" | "ready" | "analyzing" | "done" | "error";
 type Tab = "analyze" | "history" | "batch" | "compare";
@@ -35,6 +37,7 @@ export default function App() {
   const [compareSelection, setCompareSelection] = useState<string[]>([]);
   const [sampleExpected, setSampleExpected] = useState<Record<string, unknown> | null>(null);
   const [sampleTitle, setSampleTitle] = useState<string | null>(null);
+  const [signalView, setSignalView] = useState<SignalViewJSON | null>(null);
 
   const fileId = upload?.file_id ?? null;
   const analysisId = result?.manifest.analysis_id;
@@ -44,6 +47,7 @@ export default function App() {
     setResult(null);
     setSampleExpected(null);
     setSampleTitle(null);
+    setSignalView(null);
     setHistoricalMode(false);
     setSpectrogram(null);
     setSpectrogramError(null);
@@ -77,6 +81,7 @@ export default function App() {
       try {
         const specRes = await fetchSpectrogram(fileId, { sampleRateHz: sr });
         setSpectrogram(specRes);
+        try { setSignalView(await fetchSignalView(fileId, { sampleRateHz: sr })); } catch { setSignalView(null); }
       } catch (specErr) {
         setSpectrogram(null);
         setSpectrogramError(specErr instanceof Error ? specErr.message : String(specErr));
@@ -94,6 +99,7 @@ export default function App() {
     setHistoricalMode(false);
     setSpectrogram(null);
     setSpectrogramError(null);
+    setSignalView(null);
     setFiles([]);
     setPhase("uploading");
     try {
@@ -106,6 +112,7 @@ export default function App() {
       setResult(analysisRes);
       try {
         setSpectrogram(await fetchSpectrogram(loaded.file_id, {}));
+        try { setSignalView(await fetchSignalView(loaded.file_id, {})); } catch { setSignalView(null); }
       } catch (specErr) {
         setSpectrogram(null);
         setSpectrogramError(specErr instanceof Error ? specErr.message : String(specErr));
@@ -123,6 +130,7 @@ export default function App() {
     try {
       const historical = await getHistoryEntry(id);
       setSpectrogramError(null);
+      setSignalView(null);
       setResult(historical);
       setUpload(null);
       setFiles([]);
@@ -141,6 +149,7 @@ export default function App() {
     setResult(null);
     setSampleExpected(null);
     setSampleTitle(null);
+    setSignalView(null);
     setHistoricalMode(false);
     setSpectrogram(null);
     setSpectrogramError(null);
@@ -151,11 +160,22 @@ export default function App() {
     setModulationOverride("");
   }, [fileId]);
 
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const el = e.target as HTMLElement | null;
+      if (el && /^(INPUT|SELECT|TEXTAREA)$/.test(el.tagName)) return;
+      const map: Record<string, Tab> = { "1": "analyze", "2": "history", "3": "batch", "4": "compare" };
+      if (map[e.key]) setTab(map[e.key]);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
   const busy = phase === "uploading" || phase === "analyzing";
 
   return (
     <div style={{ minHeight: "100%", display: "flex", flexDirection: "column" }}>
-      <Header tab={tab} setTab={setTab} />
+      <Header tab={tab} setTab={setTab} result={result} phase={phase} />
 
       <div style={{ flex: 1, maxWidth: 1440, margin: "0 auto", width: "100%", padding: "20px 24px" }}>
         {tab === "history" && (
@@ -169,8 +189,8 @@ export default function App() {
             <div style={{ width: 300, flexShrink: 0, display: "flex", flexDirection: "column", gap: 14 }}>
               {historicalMode && result && (
                 <div className="panel" style={{ padding: "10px 12px", borderColor: "var(--status-estimated)55" }}>
-                  <div style={{ fontSize: 10.5, color: "var(--status-estimated)", fontWeight: 600, marginBottom: 2 }}>
-                    VIEWING HISTORICAL ANALYSIS
+                  <div style={{ fontSize: 12, color: "var(--status-estimated)", fontWeight: 500, marginBottom: 2 }}>
+                    Viewing a saved analysis
                   </div>
                   <div style={{ fontSize: 10, color: "var(--text-tertiary)" }}>
                     {new Date(result.manifest.created_at * 1000).toLocaleString()}
@@ -252,6 +272,17 @@ export default function App() {
 
               {result ? (
                 <>
+                  {signalView && (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 14 }}>
+                      <TimeDomainPlot view={signalView} />
+                      <SpectrumPlot view={signalView} />
+                    </div>
+                  )}
+                  {result.demod_result?.constellation && result.demod_result.constellation.length > 0 && (
+                    <div style={{ marginTop: 14 }}>
+                      <ConstellationPlot demod={result.demod_result} />
+                    </div>
+                  )}
                   <AutomaticAnalysisPanel parameters={result.parameters} analysisId={analysisId} />
                   <DemodPanel demod={result.demod_result} />
                   <FecInterleavePanel result={result} />
@@ -270,53 +301,127 @@ export default function App() {
           </div>
         )}
       </div>
+      <StatusStrip phase={phase} result={result} error={error} />
     </div>
   );
 }
 
-function Header({ tab, setTab }: { tab: Tab; setTab: (t: Tab) => void }) {
-  const tabs: { key: Tab; label: string }[] = [
-    { key: "analyze", label: "Analyze" },
-    { key: "history", label: "History" },
-    { key: "batch", label: "Batch" },
-    { key: "compare", label: "Compare" },
+function StatusStrip({ phase, result, error }: { phase: Phase; result: AnalysisResultJSON | null; error: string | null }) {
+  const warnings = result?.manifest.warnings.length ?? 0;
+  const stages = result?.stages ?? [];
+  const ok = stages.filter((s) => s.status === "ok").length;
+  const skipped = stages.filter((s) => s.status === "skipped").length;
+  const dot = (c: string) => ({ width: 6, height: 6, borderRadius: "50%", background: c, display: "inline-block" });
+  return (
+    <div style={{ borderTop: "1px solid var(--border-hairline)", background: "var(--bg-panel)",
+                  padding: "0 18px", height: 28, display: "flex", alignItems: "center", gap: 18,
+                  fontSize: 11.5, color: "var(--text-tertiary)" }}>
+      <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+        <span style={dot(error ? "var(--semantic-error)" : phase === "done" ? "var(--status-detected)"
+                : phase === "analyzing" || phase === "uploading" ? "var(--status-inferred)" : "var(--text-tertiary)")} />
+        {error ? "Analysis failed" : phase === "done" ? "Analysis complete"
+          : phase === "analyzing" ? "Analyzing" : phase === "uploading" ? "Loading" : "Idle"}
+      </span>
+      {stages.length > 0 && (
+        <span className="num">{ok} stages run{skipped > 0 ? `, ${skipped} skipped` : ""}</span>
+      )}
+      {warnings > 0 && (
+        <span style={{ color: "var(--status-inferred)" }}>
+          {warnings} warning{warnings === 1 ? "" : "s"}
+        </span>
+      )}
+      <span style={{ marginLeft: "auto", color: "var(--text-tertiary)" }}>
+        Press 1–4 to switch views
+      </span>
+    </div>
+  );
+}
+
+function Header({ tab, setTab, result, phase }: {
+  tab: Tab; setTab: (t: Tab) => void; result: AnalysisResultJSON | null; phase: Phase;
+}) {
+  const tabs: { key: Tab; label: string; hint: string }[] = [
+    { key: "analyze", label: "Analyze", hint: "1" },
+    { key: "history", label: "History", hint: "2" },
+    { key: "batch", label: "Batch", hint: "3" },
+    { key: "compare", label: "Compare", hint: "4" },
   ];
+  const s0 = result?.recording_summary;
   return (
     <header style={{ borderBottom: "1px solid var(--border-hairline)", background: "var(--bg-panel)" }}>
-      <div style={{ height: 2, background: "var(--grad-waterfall)" }} />
-      <div style={{ maxWidth: 1440, margin: "0 auto", padding: "14px 24px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <div style={{ display: "flex", alignItems: "baseline", gap: 14 }}>
-          <h1 style={{ fontFamily: "var(--font-display)", fontSize: 17, fontWeight: 600, margin: 0, letterSpacing: "0.01em" }}>
-            RF SIGNAL ANALYSIS PLATFORM
-          </h1>
-          <span className="mono" style={{ fontSize: 11, color: "var(--text-tertiary)" }}>
-            SIH 26147 &middot; NTRO &middot; Automated .IQ/.WAV Parameter Extraction
+      <div style={{ display: "flex", alignItems: "stretch", height: 52 }}>
+        {/* wordmark: the tick marks read as a frequency scale, which is
+            what this instrument actually measures */}
+        <div style={{ display: "flex", alignItems: "center", gap: 11, padding: "0 18px", borderRight: "1px solid var(--border-hairline)", minWidth: 210 }}>
+          <svg width="18" height="20" viewBox="0 0 18 20" aria-hidden="true">
+            {[0, 1, 2, 3, 4].map((i) => (
+              <rect key={i} x={i * 4} y={10 - [4, 8, 10, 7, 3][i]} width="2"
+                    height={[8, 16, 20, 14, 6][i]} fill="var(--status-estimated)"
+                    opacity={[0.35, 0.6, 1, 0.6, 0.35][i]} />
+            ))}
+          </svg>
+          <span style={{ fontSize: 15, fontWeight: 600, letterSpacing: "-0.01em", color: "var(--text-primary)" }}>
+            Nyquist
           </span>
         </div>
-        <nav style={{ display: "flex", gap: 4 }}>
-          {tabs.map((t) => (
-            <button
-              key={t.key}
-              onClick={() => setTab(t.key)}
-              style={{
-                padding: "6px 14px",
-                borderRadius: "var(--radius-sm)",
-                border: "1px solid transparent",
-                background: tab === t.key ? "var(--bg-panel-raised)" : "none",
-                color: tab === t.key ? "var(--status-estimated)" : "var(--text-tertiary)",
-                fontSize: 12.5,
-                fontWeight: tab === t.key ? 600 : 400,
-                cursor: "pointer",
-                fontFamily: "var(--font-body)",
-              }}
-            >
-              {t.label}
-            </button>
-          ))}
+
+        {/* live readout strip — an instrument always shows its current
+            operating conditions, not marketing copy */}
+        <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 0, overflow: "hidden" }}>
+          {s0 ? (
+            <>
+              <Readout label="Sample rate" value={s0.sample_rate_hz ? fmtHz(s0.sample_rate_hz) : "not set"} known={!!s0.sample_rate_hz} />
+              <Readout label="Center" value={s0.center_freq_hz ? fmtHz(s0.center_freq_hz) : "not set"} known={!!s0.center_freq_hz} />
+              <Readout label="Duration" value={s0.duration_s ? `${s0.duration_s.toFixed(3)} s` : "not set"} known={!!s0.duration_s} />
+              <Readout label="Format" value={s0.source_format ?? "unknown"} known={!!s0.source_format} />
+              <Readout label="Signals" value={String(result?.signals.length ?? 0)} known />
+            </>
+          ) : (
+            <span style={{ paddingLeft: 18, fontSize: 12.5, color: "var(--text-tertiary)" }}>
+              {phase === "analyzing" ? "Running analysis…" : phase === "uploading" ? "Loading recording…" : "No recording loaded"}
+            </span>
+          )}
+        </div>
+
+        <nav style={{ display: "flex", alignItems: "stretch", borderLeft: "1px solid var(--border-hairline)" }}>
+          {tabs.map((t) => {
+            const active = tab === t.key;
+            return (
+              <button key={t.key} onClick={() => setTab(t.key)} title={`Shortcut: ${t.hint}`}
+                style={{
+                  padding: "0 17px", border: "none", background: active ? "var(--bg-panel-raised)" : "transparent",
+                  color: active ? "var(--text-primary)" : "var(--text-secondary)",
+                  fontSize: 13, fontWeight: active ? 500 : 400, cursor: "pointer",
+                  borderBottom: active ? "2px solid var(--status-estimated)" : "2px solid transparent",
+                  borderLeft: "1px solid var(--border-hairline)",
+                }}>
+                {t.label}
+              </button>
+            );
+          })}
         </nav>
       </div>
     </header>
   );
+}
+
+function Readout({ label, value, known }: { label: string; value: string; known: boolean }) {
+  return (
+    <div style={{ padding: "0 16px", borderRight: "1px solid var(--border-hairline)", height: "100%",
+                  display: "flex", flexDirection: "column", justifyContent: "center", minWidth: 108 }}>
+      <span style={{ fontSize: 10.5, color: "var(--text-tertiary)", lineHeight: 1.3 }}>{label}</span>
+      <span className="num" style={{ fontSize: 13, lineHeight: 1.35,
+        color: known ? "var(--text-primary)" : "var(--text-tertiary)",
+        fontWeight: known ? 500 : 300, fontStyle: known ? "normal" : "italic" }}>{value}</span>
+    </div>
+  );
+}
+
+export function fmtHz(hz: number): string {
+  if (Math.abs(hz) >= 1e9) return `${(hz / 1e9).toFixed(3)} GHz`;
+  if (Math.abs(hz) >= 1e6) return `${(hz / 1e6).toFixed(3)} MHz`;
+  if (Math.abs(hz) >= 1e3) return `${(hz / 1e3).toFixed(1)} kHz`;
+  return `${hz.toFixed(0)} Hz`;
 }
 
 function OverridePanel({
@@ -332,8 +437,8 @@ function OverridePanel({
 }) {
   return (
     <div className="panel" style={{ padding: "14px 16px" }}>
-      <div style={{ fontSize: 11, letterSpacing: "0.06em", color: "var(--text-tertiary)", marginBottom: 8, textTransform: "uppercase" }}>
-        Optional overrides
+      <div style={{ fontSize: 12, color: "var(--text-secondary)", marginBottom: 9, fontWeight: 500 }}>
+        Override detected values
       </div>
       <label style={labelStyle}>Sample rate (Hz)</label>
       <input
@@ -366,8 +471,8 @@ function AnalystOverrideResult({ result, onRerun }: { result: AnalysisResultJSON
   const usedOverrides = Object.keys(result.manifest.parameters_used).length > 0;
   return (
     <div className="panel" style={{ padding: "14px 16px" }}>
-      <div style={{ fontSize: 11, letterSpacing: "0.06em", color: "var(--text-tertiary)", marginBottom: 8, textTransform: "uppercase" }}>
-        Analyst-in-the-loop
+      <div style={{ fontSize: 12, color: "var(--text-secondary)", marginBottom: 9, fontWeight: 500 }}>
+        Your corrections
       </div>
       {usedOverrides ? (
         <div style={{ fontSize: 12, color: "var(--status-detected)", marginBottom: 8 }}>
@@ -397,7 +502,7 @@ function WarningsPanel({ warnings }: { warnings: string[] }) {
       }}
     >
       <div style={{ fontSize: 11, color: "var(--status-hypothesized)", marginBottom: 6, fontWeight: 600 }}>
-        &#9888; Warnings
+        Warnings
       </div>
       {warnings.map((w, i) => (
         <div key={i} style={{ fontSize: 11.5, color: "var(--text-secondary)", lineHeight: 1.5, marginBottom: 4 }}>
@@ -429,8 +534,8 @@ function GroundTruthPanel({
   ];
   return (
     <div className="panel" style={{ padding: "14px 16px", borderColor: "var(--status-detected)44" }}>
-      <div style={{ fontSize: 11, letterSpacing: "0.06em", color: "var(--status-detected)", marginBottom: 3, textTransform: "uppercase" }}>
-        Demo sample &mdash; known ground truth
+      <div style={{ fontSize: 12, color: "var(--status-detected)", marginBottom: 3, fontWeight: 500 }}>
+        Known ground truth
       </div>
       {title && <div style={{ fontSize: 10.5, color: "var(--text-tertiary)", marginBottom: 8 }}>{title}</div>}
       <div className="mono" style={{ display: "grid", gridTemplateColumns: "1fr auto auto", gap: "3px 10px", fontSize: 10.5 }}>
@@ -477,14 +582,11 @@ function primaryButtonStyle(disabled: boolean): React.CSSProperties {
     padding: "10px 14px",
     borderRadius: "var(--radius-md)",
     border: "none",
-    background: disabled ? "var(--bg-panel-raised)" : "var(--grad-waterfall)",
-    backgroundSize: "220% 100%",
-    color: disabled ? "var(--text-tertiary)" : "#0a0d10",
-    fontWeight: 700,
+    background: disabled ? "var(--bg-panel-raised)" : "var(--status-estimated)",
+    color: disabled ? "var(--text-tertiary)" : "#0b1620",
+    fontWeight: 500,
     fontSize: 13,
     cursor: disabled ? "default" : "pointer",
-    fontFamily: "var(--font-display)",
-    letterSpacing: "0.02em",
   };
 }
 

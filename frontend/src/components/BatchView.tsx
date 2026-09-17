@@ -89,9 +89,9 @@ export function BatchView({ onOpenAnalysis }: { onOpenAnalysis: (analysisId: str
             onClick={runBatch} disabled={busy || files.length === 0}
             style={{
               padding: "10px 14px", borderRadius: "var(--radius-md)", border: "none",
-              background: busy || files.length === 0 ? "var(--bg-panel-raised)" : "var(--grad-waterfall)",
-              color: busy || files.length === 0 ? "var(--text-tertiary)" : "#0a0d10",
-              fontWeight: 700, fontSize: 13, cursor: busy || files.length === 0 ? "default" : "pointer",
+              background: busy || files.length === 0 ? "var(--bg-panel-raised)" : "var(--status-estimated)",
+              color: busy || files.length === 0 ? "var(--text-tertiary)" : "#0b1620",
+              fontWeight: 500, fontSize: 13, cursor: busy || files.length === 0 ? "default" : "pointer",
               fontFamily: "var(--font-display)",
             }}
           >
@@ -126,7 +126,7 @@ export function BatchView({ onOpenAnalysis }: { onOpenAnalysis: (analysisId: str
                 <thead>
                   <tr>
                     {["Status", "Modulation", "Signals", "Detail"].map((h) => (
-                      <th key={h} style={{ textAlign: "left", padding: "8px 14px", color: "var(--text-tertiary)", fontSize: 10, textTransform: "uppercase", borderBottom: "1px solid var(--border-hairline)" }}>{h}</th>
+                      <th key={h} style={{ textAlign: "left", padding: "8px 14px", color: "var(--text-tertiary)", fontSize: 10, borderBottom: "1px solid var(--border-hairline)" }}>{h}</th>
                     ))}
                   </tr>
                 </thead>

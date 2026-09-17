@@ -1,121 +1,143 @@
+/* ============================================================
+   Nyquist — visual system
+
+   Design rationale, so future edits don't erode it:
+
+   This is an instrument, not a website. Its subject is measurement
+   under uncertainty, so the interface encodes certainty structurally
+   rather than decoratively:
+
+   1. The UI chrome is deliberately near-monochrome. The ONLY saturated
+      colour in the whole interface is the five-state confidence
+      vocabulary and the spectrogram's own colormap. In a tool where
+      colour means confidence, decorative colour would be lying.
+   2. Certainty is carried by type weight and opacity, not only by a
+      coloured pill — a value the system is unsure of must not look as
+      solid as one it measured directly. See .value-* classes.
+   3. Radius is differentiated by role, not applied uniformly: data
+      surfaces are near-square (they're readouts), controls are softer
+      (they're touchable). One radius on everything is a tell.
+   ============================================================ */
+
 :root {
-  /* --- Surface --- */
-  --bg-void: #0a0d10;           /* page background: cool graphite, not pure black */
-  --bg-panel: #12161b;          /* card/panel surface */
-  --bg-panel-raised: #171c22;   /* nested/hover surface */
-  --bg-inset: #0d1114;          /* recessed areas: hex dumps, code blocks */
-  --border-hairline: #232a31;
-  --border-hairline-bright: #313a43;
+  /* Surfaces — warm graphite, not blue-black and not #111 */
+  --bg-canvas: #101114;
+  --bg-panel: #16181c;
+  --bg-panel-raised: #1c1f24;
+  --bg-inset: #0c0d10;
+  --bg-void: #101114;          /* legacy alias */
 
-  /* --- Text --- */
-  --text-primary: #e4e9ed;
-  --text-secondary: #8b96a1;
-  --text-tertiary: #5a6570;
+  --border-hairline: #22252b;
+  --border-hairline-bright: #2e323a;
 
-  /* --- Signature gradient: lifted directly from the waterfall colormap,
-     the one visual element that is unmistakably "RF analysis tool" and
-     nothing else. Reused for confidence bars, stage progress, and any
-     other place we want the UI to visually rhyme with the spectrogram. --- */
-  --grad-waterfall: linear-gradient(90deg, #1b1464 0%, #0a6ba8 28%, #0aa6a6 50%, #ffb000 75%, #ff4433 100%);
-  --waterfall-stop-1: #1b1464;
-  --waterfall-stop-2: #0a6ba8;
-  --waterfall-stop-3: #0aa6a6;
-  --waterfall-stop-4: #ffb000;
-  --waterfall-stop-5: #ff4433;
+  /* Type — warm off-white reads calmer than pure white on dark */
+  --text-primary: #e8e6e3;
+  --text-secondary: #8a8f98;
+  --text-tertiary: #5c616b;
 
-  /* --- Five-state honesty vocabulary: each status gets a distinct color,
-     not a generic green/red pass-fail scale. Cool = certain, warm = less
-     certain, this mirrors the waterfall gradient itself (cold->hot). --- */
-  --status-detected: #4fd1c5;
-  --status-detected-dim: rgba(79, 209, 197, 0.14);
-  --status-estimated: #38a3e8;
-  --status-estimated-dim: rgba(56, 163, 232, 0.14);
-  --status-inferred: #ffb300;
-  --status-inferred-dim: rgba(255, 179, 0, 0.14);
-  --status-hypothesized: #ff8a3d;
-  --status-hypothesized-dim: rgba(255, 138, 61, 0.14);
-  --status-unknown: #9aa0a6;
-  --status-unknown-dim: rgba(154, 160, 166, 0.12);
+  /* Confidence vocabulary — the interface's only saturated colour.
+     Cool/measured → warm/uncertain → grey, because the absence of
+     colour for UNKNOWN is semantically exact: no colour, no knowledge. */
+  --status-detected: #5ed3a0;
+  --status-detected-dim: rgba(94, 211, 160, 0.12);
+  --status-estimated: #5aa9e6;
+  --status-estimated-dim: rgba(90, 169, 230, 0.12);
+  --status-inferred: #e5b567;
+  --status-inferred-dim: rgba(229, 181, 103, 0.12);
+  --status-hypothesized: #e08a5b;
+  --status-hypothesized-dim: rgba(224, 138, 91, 0.12);
+  --status-unknown: #6b7280;
+  --status-unknown-dim: rgba(107, 114, 128, 0.10);
 
-  /* --- Semantic (sparingly used, e.g. errors/warnings) --- */
-  --semantic-error: #ff4d5e;
-  --semantic-warning: #ffb300;
-  --semantic-ok: #4fd1c5;
+  --semantic-error: #e5646e;
+  --semantic-warning: var(--status-inferred);
+  --semantic-ok: var(--status-detected);
 
-  /* --- Type --- */
-  --font-display: "Space Grotesk", "Inter", sans-serif;
-  --font-body: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", monospace;
+  /* Spectrogram colormap — domain-correct, confined to the plot itself */
+  --wf-1: #1b1464;
+  --wf-2: #0a6ba8;
+  --wf-3: #0aa6a6;
+  --wf-4: #ffb000;
+  --wf-5: #ff4433;
+  --grad-waterfall: linear-gradient(90deg, var(--wf-1), var(--wf-2), var(--wf-3), var(--wf-4), var(--wf-5));
 
-  --radius-sm: 3px;
-  --radius-md: 6px;
-  --radius-lg: 10px;
+  --font-body: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", monospace;
+
+  /* Radius by role, not one value everywhere */
+  --radius-readout: 2px;   /* data surfaces: near-square, they are readouts */
+  --radius-control: 5px;   /* things you touch */
+  --radius-sm: 2px;        /* legacy aliases, mapped to the role system */
+  --radius-md: 5px;
+  --radius-lg: 6px;
+
+  --rule: 1px solid var(--border-hairline);
 }
 
-* {
-  box-sizing: border-box;
-}
-
-html, body, #root {
-  height: 100%;
-  margin: 0;
-}
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; margin: 0; }
 
 body {
-  background: var(--bg-void);
-  background-image:
-    radial-gradient(ellipse 1200px 800px at 15% -10%, rgba(10, 107, 168, 0.06), transparent),
-    radial-gradient(ellipse 1000px 700px at 100% 0%, rgba(255, 176, 0, 0.03), transparent);
+  background: var(--bg-canvas);
   color: var(--text-primary);
   font-family: var(--font-body);
+  font-size: 14px;
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
-::selection {
-  background: rgba(10, 166, 166, 0.35);
-}
+::selection { background: rgba(90, 169, 230, 0.28); }
 
-::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
-}
-::-webkit-scrollbar-track {
-  background: var(--bg-void);
-}
-::-webkit-scrollbar-thumb {
-  background: var(--border-hairline-bright);
-  border-radius: 5px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: var(--text-tertiary);
-}
+::-webkit-scrollbar { width: 9px; height: 9px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-hairline-bright); border-radius: 5px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-tertiary); }
 
-.mono {
+/* Every number in this interface is tabular. Columns of measurements
+   that don't align are harder to scan, and this is a tool for scanning. */
+.mono, .num {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
+  font-feature-settings: "zero" 1;   /* slashed zero: it's a measurement readout */
 }
 
-.hairline {
-  border: 1px solid var(--border-hairline);
-}
+/* --- Certainty encoded in type ------------------------------------
+   The core idea of the system. A measured value is solid; an inferred
+   one is lighter; an unknown one is visibly hollow. Readable at a
+   glance without reading a single label. */
+.value-measured   { color: var(--text-primary); font-weight: 500; opacity: 1; }
+.value-inferred   { color: var(--text-primary); font-weight: 400; opacity: 0.88; }
+.value-uncertain  { color: var(--text-secondary); font-weight: 400; opacity: 0.75; }
+.value-unknown    { color: var(--text-tertiary); font-weight: 300; font-style: italic; }
 
 .panel {
   background: var(--bg-panel);
-  border: 1px solid var(--border-hairline);
-  border-radius: var(--radius-lg);
+  border: var(--rule);
+  border-radius: var(--radius-readout);
 }
 
-.scanline-accent {
-  position: relative;
+/* A ledger row: the primary way findings are presented. Hairline-
+   separated rows rather than a grid of identical cards — measurements
+   belong in a log, not on trading cards. */
+.ledger-row {
+  display: grid;
+  align-items: baseline;
+  border-bottom: var(--rule);
+  transition: background 120ms ease;
 }
-.scanline-accent::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: var(--grad-waterfall);
-  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-  opacity: 0.85;
+.ledger-row:last-child { border-bottom: none; }
+.ledger-row:hover { background: rgba(255, 255, 255, 0.018); }
+
+button { font-family: inherit; }
+
+/* Focus is visible and consistent — keyboard users are analysts too */
+:focus-visible {
+  outline: 2px solid var(--status-estimated);
+  outline-offset: 2px;
+  border-radius: var(--radius-readout);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }

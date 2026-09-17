@@ -13,8 +13,8 @@ function prettyStageName(name: string): string {
 export function StageProgress({ stages }: { stages: StageInfo[] }) {
   return (
     <div className="panel" style={{ padding: "14px 16px" }}>
-      <div style={{ fontSize: 11, letterSpacing: "0.06em", color: "var(--text-tertiary)", marginBottom: 8, textTransform: "uppercase" }}>
-        Pipeline
+      <div style={{ fontSize: 11, color: "var(--text-secondary)", marginBottom: 9, fontWeight: 500 }}>
+        Pipeline stages
       </div>
       <div style={{ display: "flex", flexDirection: "column" }}>
         {stages.map((s, i) => {

@@ -40,6 +40,7 @@ PIPELINE_VERSION = "0.1.0-mvp"
 FEC_HYPOTHESIS_MAX_BITS = 4000  # see rationale at the FEC stage below
 NOISE_CHUNK_SIZE = 2_000_000    # per-chunk size for the full-file streaming scan (peak memory bound)
 SOI_ANALYSIS_MAX_SAMPLES = 2_000_000  # deep per-sample analysis cap on the selected signal-of-interest region
+CONSTELLATION_MAX_POINTS = 2000  # bounded scatter payload; see demod stage
 MAX_SIGNALS_PER_FILE = 5        # cap on how many detected regions get full per-signal analysis (see run_pipeline)
 
 
@@ -404,11 +405,22 @@ def _analyze_region(handle: RecordingHandle, region: tuple[int, int], overrides:
             if fused_mod.value in ("2fsk", "4fsk"):
                 extra = {"deviation_hz": symbol_rate_param.value * 1.5, "sample_rate_hz": handle.sample_rate_hz}
             demod = demod_module.demodulate(fused_mod.value, soi, samples_per_symbol=sps, **extra)
+            # Constellation points: subsample to a bounded count so the
+            # payload stays small regardless of recording length (a scatter
+            # plot saturates visually long before 2000 points anyway).
+            syms = np.asarray(demod.symbols)
+            if len(syms) > CONSTELLATION_MAX_POINTS:
+                idx = np.linspace(0, len(syms) - 1, CONSTELLATION_MAX_POINTS).astype(int)
+                syms = syms[idx]
+            constellation = [[round(float(c.real), 4), round(float(c.imag), 4)] for c in syms]
+
             demod_result = {
                 "modulation": demod.modulation, "num_bits": len(demod.bits),
                 "evm_percent": round(demod.evm_percent, 2), "lock_quality": round(demod.lock_quality, 3),
                 "samples_per_symbol_used": demod.samples_per_symbol_used, "notes": demod.notes,
                 "bits_preview": demod.bits[:64].tolist(),
+                "constellation": constellation,
+                "constellation_total_symbols": int(len(demod.symbols)),
             }
             demod_bits = demod.bits
             stages.append(StageResult("demodulation_symbol_sync", "ok", time.time() - t0,

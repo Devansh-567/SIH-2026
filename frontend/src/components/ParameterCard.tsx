@@ -1,159 +1,184 @@
 import { useState } from "react";
-import type { Parameter } from "../lib/types";
-import { StatusBadge } from "./StatusBadge";
-import { ConfidenceBar } from "./ConfidenceBar";
+import type { Parameter, Status } from "../lib/types";
 import { submitFeedback } from "../lib/api";
 
+/* A finding rendered as a ledger row, not a card.
+
+   The central design idea lives here: certainty is carried by the type
+   itself. A DETECTED value is solid and full-weight; an INFERRED one is
+   slightly lighter; an UNKNOWN one is hollow and italic. You can scan a
+   column of findings and see what the system is sure of without reading
+   a single status label. The label is confirmation, not the signal. */
+
+const CERTAINTY_CLASS: Record<Status, string> = {
+  DETECTED: "value-measured",
+  ESTIMATED: "value-measured",
+  INFERRED: "value-inferred",
+  HYPOTHESIZED: "value-uncertain",
+  UNKNOWN: "value-unknown",
+};
+
+const STATUS_COLOR: Record<Status, string> = {
+  DETECTED: "var(--status-detected)",
+  ESTIMATED: "var(--status-estimated)",
+  INFERRED: "var(--status-inferred)",
+  HYPOTHESIZED: "var(--status-hypothesized)",
+  UNKNOWN: "var(--status-unknown)",
+};
+
 function formatValue(value: unknown, unit: string | null): string {
-  if (value === null || value === undefined) return "\u2014";
+  if (value === null || value === undefined) return "not determined";
   if (typeof value === "number") {
-    const formatted = Number.isInteger(value) ? value.toString() : value.toFixed(3);
-    return unit ? `${formatted} ${unit}` : formatted;
+    const abs = Math.abs(value);
+    let out: string;
+    if (unit === "Hz" && abs >= 1e6) out = `${(value / 1e6).toFixed(3)} MHz`;
+    else if (unit === "Hz" && abs >= 1e3) out = `${(value / 1e3).toFixed(2)} kHz`;
+    else { out = Number.isInteger(value) ? String(value) : value.toFixed(3); return unit ? `${out} ${unit}` : out; }
+    return out;
   }
   return String(value);
 }
 
-function prettyName(name: string): string {
-  return name
-    .replace(/_hz$/, "")
-    .replace(/_db$/, "")
-    .replace(/_/g, " ")
-    .replace(/\b\w/g, (c) => c.toUpperCase());
+function label(name: string): string {
+  const map: Record<string, string> = {
+    sample_rate_hz: "Sample rate",
+    center_frequency_hz: "Center frequency",
+    absolute_peak_frequency_hz: "Peak frequency (absolute)",
+    peak_frequency_hz: "Peak frequency (baseband)",
+    occupied_bandwidth_hz: "Occupied bandwidth",
+    symbol_rate_hz: "Symbol rate",
+    noise_floor_db: "Noise floor",
+    snr_db: "Signal-to-noise ratio",
+    spectral_entropy: "Spectral entropy",
+    modulation: "Modulation",
+  };
+  return map[name] ?? name.replace(/_hz$|_db$/, "").replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase());
+}
+
+/** Confidence as a discrete tick scale — an instrument reads in
+ *  graduations, not a smooth marketing progress bar. */
+function ConfidenceScale({ confidence, color }: { confidence: number; color: string }) {
+  const filled = Math.round(Math.max(0, Math.min(1, confidence)) * 10);
+  return (
+    <span style={{ display: "inline-flex", gap: 1.5, alignItems: "center" }} aria-label={`Confidence ${Math.round(confidence * 100)} percent`}>
+      {Array.from({ length: 10 }, (_, i) => (
+        <span key={i} style={{
+          width: 3, height: i < filled ? 11 : 6, background: i < filled ? color : "var(--border-hairline-bright)",
+          borderRadius: 0.5, transition: "height 150ms ease",
+        }} />
+      ))}
+    </span>
+  );
 }
 
 export function ParameterCard({ param, analysisId }: { param: Parameter; analysisId?: string }) {
-  const [expanded, setExpanded] = useState(false);
+  const [open, setOpen] = useState(false);
   const [correcting, setCorrecting] = useState(false);
-  const [correctionValue, setCorrectionValue] = useState("");
-  const [correctionNote, setCorrectionNote] = useState("");
-  const [feedbackSent, setFeedbackSent] = useState(false);
-  const hasEvidence = param.evidence.length > 0;
-  const hasAlternatives = param.alternatives.length > 0;
-  const canExpand = hasEvidence || hasAlternatives || !!analysisId;
+  const [val, setVal] = useState("");
+  const [note, setNote] = useState("");
+  const [sent, setSent] = useState(false);
 
-  const submitCorrection = async () => {
-    if (!analysisId || !correctionValue.trim()) return;
-    await submitFeedback(analysisId, param.name, correctionValue.trim(), correctionNote.trim() || undefined);
-    setFeedbackSent(true);
-    setCorrecting(false);
+  const color = STATUS_COLOR[param.status];
+  const hasDetail = param.evidence.length > 0 || param.alternatives.length > 0 || !!analysisId;
+
+  const send = async () => {
+    if (!analysisId || !val.trim()) return;
+    await submitFeedback(analysisId, param.name, val.trim(), note.trim() || undefined);
+    setSent(true); setCorrecting(false);
   };
 
   return (
-    <div
-      className="panel"
-      style={{
-        padding: "12px 14px",
-        display: "flex",
-        flexDirection: "column",
-        gap: 8,
-        cursor: canExpand ? "pointer" : "default",
-      }}
-      onClick={() => canExpand && setExpanded((e) => !e)}
-    >
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
-        <div style={{ minWidth: 0 }}>
-          <div style={{ fontSize: 11, color: "var(--text-tertiary)", letterSpacing: "0.04em", textTransform: "uppercase" }}>
-            {prettyName(param.name)}
-          </div>
-          <div className="mono" style={{ fontSize: 18, fontWeight: 600, marginTop: 2, color: "var(--text-primary)" }}>
-            {formatValue(param.value, param.unit)}
-          </div>
-        </div>
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
-          <StatusBadge status={param.status} />
-          {feedbackSent && (
-            <span style={{ fontSize: 9.5, color: "var(--status-detected)" }}>correction recorded</span>
-          )}
-        </div>
-      </div>
+    <div className="ledger-row" style={{ gridTemplateColumns: "minmax(150px,1.1fr) minmax(130px,1fr) 108px 74px 22px", gap: 14, padding: "11px 16px", cursor: hasDetail ? "pointer" : "default" }}
+         onClick={() => hasDetail && setOpen((o) => !o)}>
+      <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>{label(param.name)}</span>
 
-      {param.status !== "UNKNOWN" && param.status !== "DETECTED" && (
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <ConfidenceBar confidence={param.confidence} />
-          <span className="mono" style={{ fontSize: 11, color: "var(--text-secondary)", minWidth: 34, textAlign: "right" }}>
-            {(param.confidence * 100).toFixed(0)}%
-          </span>
-        </div>
-      )}
+      <span className={`num ${CERTAINTY_CLASS[param.status]}`} style={{ fontSize: 14.5 }}>
+        {formatValue(param.value, param.unit)}
+      </span>
 
-      {canExpand && (
-        <div style={{ fontSize: 10.5, color: "var(--text-tertiary)", display: "flex", alignItems: "center", gap: 4 }}>
-          <span style={{ transform: expanded ? "rotate(90deg)" : "none", transition: "transform 150ms", display: "inline-block" }}>
-            &#8250;
-          </span>
-          {expanded ? "hide details" : hasEvidence ? `why? (${param.evidence.length} evidence item${param.evidence.length === 1 ? "" : "s"})` : "details"}
-        </div>
-      )}
+      <span style={{ fontSize: 11, color, letterSpacing: "0.01em" }}>
+        {param.status === "DETECTED" ? "measured"
+          : param.status === "ESTIMATED" ? "estimated"
+          : param.status === "INFERRED" ? "inferred"
+          : param.status === "HYPOTHESIZED" ? "hypothesis"
+          : "not determined"}
+      </span>
 
-      {expanded && (
-        <div style={{ borderTop: "1px solid var(--border-hairline)", paddingTop: 8, display: "flex", flexDirection: "column", gap: 8 }} onClick={(e) => e.stopPropagation()}>
-          {hasAlternatives && (
+      <span style={{ display: "flex", justifyContent: "flex-end" }}>
+        {param.status !== "UNKNOWN" && param.status !== "DETECTED"
+          ? <ConfidenceScale confidence={param.confidence} color={color} />
+          : <span style={{ fontSize: 11, color: "var(--text-tertiary)" }}>{param.status === "DETECTED" ? "exact" : "—"}</span>}
+      </span>
+
+      <span style={{ color: "var(--text-tertiary)", fontSize: 11, textAlign: "right",
+                     transform: open ? "rotate(90deg)" : "none", transition: "transform 140ms" }}>
+        {hasDetail ? "›" : ""}
+      </span>
+
+      {open && (
+        <div style={{ gridColumn: "1 / -1", paddingTop: 12, marginTop: 4, borderTop: "1px solid var(--border-hairline)",
+                      display: "flex", flexDirection: "column", gap: 12 }} onClick={(e) => e.stopPropagation()}>
+          {param.evidence.length > 0 && (
             <div>
-              <div style={{ fontSize: 10, color: "var(--text-tertiary)", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.04em" }}>
-                Alternative hypotheses
+              <div style={{ fontSize: 11.5, color: "var(--text-secondary)", marginBottom: 6 }}>
+                Why the system reports this
               </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                {param.alternatives.map((alt, i) => (
-                  <div key={i} style={{ display: "flex", justifyContent: "space-between", fontSize: 12 }} className="mono">
-                    <span style={{ color: "var(--text-secondary)" }}>{String(alt.value)}</span>
-                    <span style={{ color: "var(--text-tertiary)" }}>{(alt.confidence * 100).toFixed(0)}%</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-          {hasEvidence && (
-            <div>
-              <div style={{ fontSize: 10, color: "var(--text-tertiary)", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.04em" }}>
-                Evidence
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
                 {param.evidence.map((ev, i) => (
-                  <div key={i} style={{ fontSize: 12, lineHeight: 1.45 }}>
-                    <span className="mono" style={{ color: "var(--status-estimated)", fontSize: 10.5 }}>
+                  <div key={i} style={{ display: "flex", gap: 10, fontSize: 12, lineHeight: 1.5 }}>
+                    <span className="num" style={{ color: "var(--status-estimated)", fontSize: 10.5, minWidth: 148, opacity: 0.85 }}>
                       {ev.source}
                     </span>
-                    <div style={{ color: "var(--text-secondary)" }}>{ev.description}</div>
+                    <span style={{ color: "var(--text-secondary)", flex: 1 }}>{ev.description}</span>
                   </div>
                 ))}
               </div>
             </div>
           )}
-          {analysisId && !feedbackSent && (
+
+          {param.alternatives.length > 0 && (
             <div>
-              {!correcting ? (
-                <button
-                  onClick={() => setCorrecting(true)}
-                  style={{ fontSize: 10.5, color: "var(--status-hypothesized)", background: "none", border: "none", cursor: "pointer", padding: 0 }}
-                >
-                  Disagree? Submit a correction
-                </button>
-              ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  <input
-                    autoFocus placeholder="Correct value" value={correctionValue}
-                    onChange={(e) => setCorrectionValue(e.target.value)}
-                    style={{ padding: "5px 8px", background: "var(--bg-inset)", border: "1px solid var(--border-hairline)", borderRadius: "var(--radius-sm)", color: "var(--text-primary)", fontSize: 11.5, fontFamily: "var(--font-mono)" }}
-                  />
-                  <input
-                    placeholder="Note (optional)" value={correctionNote}
-                    onChange={(e) => setCorrectionNote(e.target.value)}
-                    style={{ padding: "5px 8px", background: "var(--bg-inset)", border: "1px solid var(--border-hairline)", borderRadius: "var(--radius-sm)", color: "var(--text-primary)", fontSize: 11.5 }}
-                  />
-                  <div style={{ display: "flex", gap: 6 }}>
-                    <button onClick={submitCorrection} disabled={!correctionValue.trim()} style={{ flex: 1, padding: "5px 8px", borderRadius: "var(--radius-sm)", border: "none", background: "var(--status-detected)", color: "#0a0d10", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
-                      Submit
-                    </button>
-                    <button onClick={() => setCorrecting(false)} style={{ padding: "5px 8px", borderRadius: "var(--radius-sm)", border: "1px solid var(--border-hairline-bright)", background: "none", color: "var(--text-tertiary)", fontSize: 11, cursor: "pointer" }}>
-                      Cancel
-                    </button>
-                  </div>
+              <div style={{ fontSize: 11.5, color: "var(--text-secondary)", marginBottom: 6 }}>
+                Other candidates considered
+              </div>
+              {param.alternatives.map((a, i) => (
+                <div key={i} className="num" style={{ display: "flex", justifyContent: "space-between", fontSize: 12, padding: "2px 0", maxWidth: 320 }}>
+                  <span style={{ color: "var(--text-secondary)" }}>{String(a.value)}</span>
+                  <span style={{ color: "var(--text-tertiary)" }}>{(a.confidence * 100).toFixed(0)}%</span>
                 </div>
-              )}
+              ))}
             </div>
           )}
+
+          {analysisId && (sent ? (
+            <div style={{ fontSize: 11.5, color: "var(--status-detected)" }}>Correction saved.</div>
+          ) : correcting ? (
+            <div style={{ display: "flex", gap: 7, alignItems: "center", flexWrap: "wrap" }}>
+              <input autoFocus placeholder="Correct value" value={val} onChange={(e) => setVal(e.target.value)} style={inp(150)} />
+              <input placeholder="Why (optional)" value={note} onChange={(e) => setNote(e.target.value)} style={inp(230)} />
+              <button onClick={send} disabled={!val.trim()} style={btnPrimary}>Save correction</button>
+              <button onClick={() => setCorrecting(false)} style={btnQuiet}>Cancel</button>
+            </div>
+          ) : (
+            <button onClick={() => setCorrecting(true)} style={{ ...btnQuiet, alignSelf: "flex-start" }}>
+              This is wrong — correct it
+            </button>
+          ))}
         </div>
       )}
     </div>
   );
 }
+
+const inp = (w: number): React.CSSProperties => ({
+  width: w, padding: "5px 8px", background: "var(--bg-inset)", border: "1px solid var(--border-hairline-bright)",
+  borderRadius: "var(--radius-control)", color: "var(--text-primary)", fontSize: 12, fontFamily: "var(--font-mono)",
+});
+const btnPrimary: React.CSSProperties = {
+  padding: "5px 11px", borderRadius: "var(--radius-control)", border: "none",
+  background: "var(--status-estimated)", color: "#0b1620", fontSize: 12, fontWeight: 500, cursor: "pointer",
+};
+const btnQuiet: React.CSSProperties = {
+  padding: "5px 11px", borderRadius: "var(--radius-control)", border: "1px solid var(--border-hairline-bright)",
+  background: "transparent", color: "var(--text-secondary)", fontSize: 12, cursor: "pointer",
+};
