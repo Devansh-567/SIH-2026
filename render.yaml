@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: sih-2026
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /healthz
+    envVars:
+      - key: RFPLATFORM_STATIC_DIR
+        value: /app/static

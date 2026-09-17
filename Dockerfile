@@ -17,28 +17,36 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# CPU-only torch (~200 MB) from PyTorch's index instead of the PyPI wheel
-# (~527 MB + multi-GB nvidia-* CUDA deps). The fallback covers the case
-# where this exact version has not been published to the CPU index.
-RUN pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu torch==2.13.0 \
- || pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu torch
-
 COPY requirements-deploy.txt ./
 RUN pip install --no-cache-dir -r requirements-deploy.txt
+
+# torch is OFF by default. Measured footprint without it is ~200 MB RSS,
+# which fits Render Free's 512 MB; CPU torch adds roughly 300-400 MB and
+# pushes it over. With torch absent, stage 9 (ai_classification) reports
+# "skipped" and the DSP classifier carries the analysis -- every other
+# stage is unaffected. See rfplatform/pipeline/stages.py::_run_ml_classifier.
+#
+# On a host with >=1 GB RAM, build with:  --build-arg INSTALL_TORCH=true
+# The CPU-only index is deliberate: the PyPI Linux torch wheel is ~527 MB
+# and pulls in multi-GB nvidia-* CUDA packages.
+ARG INSTALL_TORCH=false
+RUN if [ "$INSTALL_TORCH" = "true" ]; then \
+      pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu torch==2.13.0 \
+      || pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu torch; \
+    fi
 
 COPY rfplatform ./rfplatform
 COPY --from=frontend /build/dist ./static
 
 # Every writable path the app uses lives under /tmp: uploads
 # (rfplatform/api/main.py) and the sqlite history db (rfplatform/storage/db.py).
-# That keeps the image itself read-only, which is what Hugging Face Spaces,
-# Render and Fly all expect.
+# That suits hosts with a read-only or ephemeral image filesystem.
 ENV PYTHONUNBUFFERED=1 \
-    RFPLATFORM_STATIC_DIR=/app/static \
-    PORT=7860
+    RFPLATFORM_STATIC_DIR=/app/static
 
-EXPOSE 7860
+EXPOSE 10000
 
-# Bind to $PORT, never a hardcoded port -- Render/Fly inject their own and a
-# hardcoded port is why the previous deploy reported "no open ports detected".
-CMD ["sh", "-c", "uvicorn rfplatform.api.server:app --host 0.0.0.0 --port ${PORT:-7860}"]
+# Bind to $PORT, never a hardcoded port. The previous Dockerfile hardcoded
+# 8000, which is why Render reported "no open ports detected" and the
+# service never went live.
+CMD ["sh", "-c", "uvicorn rfplatform.api.server:app --host 0.0.0.0 --port ${PORT:-10000}"]
