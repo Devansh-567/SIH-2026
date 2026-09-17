@@ -30,7 +30,7 @@ the actual rendered UI before a live demo.
 
 ## Design system
 
-The product is called **Nyquist**. The name, wordmark and all copy live in
+The product is called **Modulus**. The name, wordmark and all copy live in
 `src/App.tsx` and `src/theme.css` — there is no hackathon or organisation
 branding anywhere in the interface, deliberately: it should read as an
 instrument someone bought, not an entry someone submitted.

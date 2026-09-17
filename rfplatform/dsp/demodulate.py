@@ -87,7 +87,7 @@ def _matched_filter(iq: np.ndarray, samples_per_symbol: int, rolloff: float = 0.
     """
     Apply an RRC matched filter at the receiver. A single RRC (as applied at
     the transmitter for spectral containment) does NOT by itself satisfy the
-    zero-ISI Nyquist criterion -- only the cascade of transmit RRC + receive
+    zero-ISI Modulus criterion -- only the cascade of transmit RRC + receive
     matched RRC gives the zero-ISI raised-cosine response. Skipping this step
     (naive direct downsampling of a pulse-shaped signal) leaves real
     inter-symbol interference in the "recovered" symbols, which is what was

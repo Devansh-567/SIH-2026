@@ -318,7 +318,7 @@ extend this code, be aware of:
    noise floor against total time-domain power without integrating over
    bandwidth gives wildly wrong SNR. Fixed in `dsp/classifier.py`.
 2. **RRC-shaped signals need a matched filter at the receiver**, not direct
-   downsampling -- a single RRC does not satisfy the zero-ISI Nyquist
+   downsampling -- a single RRC does not satisfy the zero-ISI Modulus
    criterion by itself; only the TX+RX RRC cascade does. Fixed in
    `dsp/demodulate.py::_matched_filter`.
 3. **The correct symbol-sampling phase after matched filtering was offset=0,

@@ -361,7 +361,7 @@ function Header({ tab, setTab, result, phase }: {
             ))}
           </svg>
           <span style={{ fontSize: 15, fontWeight: 600, letterSpacing: "-0.01em", color: "var(--text-primary)" }}>
-            Nyquist
+            Modulus
           </span>
         </div>
 
