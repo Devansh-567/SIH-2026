@@ -120,7 +120,13 @@ def _run_ml_classifier(iq: np.ndarray, sample_rate_hz: float) -> Parameter | Non
     as before) if no checkpoint has been trained yet, so a fresh checkout
     without a checkpoint file still runs end-to-end.
     """
-    from rfplatform.ml.inference import ModelUnavailableError, classify
+    try:
+        from rfplatform.ml.inference import ModelUnavailableError, classify
+    except ImportError:
+        # torch not installed in this environment (e.g. a slim deployment
+        # image). Same graceful DSP-only fallback as a missing checkpoint,
+        # rather than a 500 on every /analyze call.
+        return None
     try:
         return classify(iq)
     except ModelUnavailableError:

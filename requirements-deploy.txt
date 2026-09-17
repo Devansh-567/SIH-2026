@@ -1,0 +1,17 @@
+# Runtime dependencies for the deployed container.
+# Differs from requirements.txt in two ways:
+#   1. pytest / httpx are dev-only and are not installed in the image.
+#   2. torch is NOT listed here -- the Dockerfile installs the CPU-only
+#      wheel from PyTorch's own index. The PyPI torch wheel for Linux is
+#      ~527 MB and drags in several GB of nvidia-* CUDA packages, which is
+#      what blows past Vercel's 500 MB limit and Render Free's build quota.
+numpy==2.4.4
+scipy==1.17.1
+fastapi==0.141.1
+uvicorn[standard]==0.52.4
+pydantic==2.13.4
+reedsolo==1.7.0
+scikit-commpy==0.8.0
+reportlab==4.4.10
+python-multipart==0.0.32
+pypdf==5.9.0

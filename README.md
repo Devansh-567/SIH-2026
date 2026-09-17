@@ -1,3 +1,13 @@
+---
+title: Modulus RF Signal Analysis
+emoji: 📡
+colorFrom: indigo
+colorTo: gray
+sdk: docker
+app_port: 7860
+pinned: false
+---
+
 # RF Signal Analysis Platform -- MVP Backend
 
 SIH Problem Statement 26147 (NTRO) -- "Automated model for analysis of .IQ

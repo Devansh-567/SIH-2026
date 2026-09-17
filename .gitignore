@@ -70,3 +70,6 @@ pnpm-debug.log*
 # Database files
 *.sqlite
 *.sqlite3
+
+# TS incremental build cache
+*.tsbuildinfo
